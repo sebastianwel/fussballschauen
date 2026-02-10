@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import SearchClient from "@/components/SearchClient";
+import { Suspense } from "react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -30,74 +31,74 @@ export default async function SearchPage({ searchParams }) {
   const isUserLocation = params?.u === "true";
 
   let bars = [];
-  let searchCenter = null;
 
-  // SCHRITT 1: Wenn wir keine Koordinaten haben, aber eine Suchanfrage (z.B. "München")
-  // versuchen wir, den Ort zu geocodieren.
+  // --- SCHRITT 1: Geocoding (Nur wenn keine Koordinaten da sind) ---
   if (!lat && !lng && query) {
     try {
       const geoRes = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
       );
       const geoData = await geoRes.json();
-
       if (geoData && geoData.length > 0) {
         lat = parseFloat(geoData[0].lat);
         lng = parseFloat(geoData[0].lon);
-        // Wir merken uns, dass wir Koordinaten "gefunden" haben
-        searchCenter = [lat, lng];
       }
     } catch (e) {
       console.error("Geocoding Fehler:", e);
     }
   }
 
-  // SCHRITT 2: Bars laden und sortieren
+  // --- SCHRITT 2: Supabase Abfrage aufbauen ---
+  let supabaseQuery = supabase.from("bars").select("*");
 
-  // Fall A: Wir haben jetzt Koordinaten (Entweder vom User oder durch Geocoding von "München")
-  if (lat && lng) {
-    const { data } = await supabase
-      .from("bars")
-      .select("*")
-      .not("lat", "is", null)
-      .not("lng", "is", null);
+  // Grundfilter: Nur Bars, die operativ sind
+  supabaseQuery = supabaseQuery.or(
+    "google_meta.is.null,google_meta->>status.eq.OPERATIONAL",
+  );
 
-    if (data) {
-      // Nach Distanz sortieren
-      bars = data
+  // TEXT-FILTER LOGIK:
+  // Wir filtern NUR nach Text, wenn es KEINE automatische User-Ortung ist.
+  // Denn bei 'u=true' ist der Query-Text nur die Adresse für die Anzeige.
+  if (query && !isUserLocation) {
+    supabaseQuery = supabaseQuery.or(
+      `name.ilike.%${query}%,city.ilike.%${query}%,zip_code.ilike.%${query}%`,
+    );
+  }
+
+  const { data, error } = await supabaseQuery;
+
+  if (data) {
+    bars = data;
+
+    // --- SCHRITT 3: Sortierung & Distanz ---
+    if (lat && lng) {
+      bars = bars
         .map((bar) => ({
           ...bar,
-          distance: getDistance(lat, lng, bar.lat, bar.lng),
+          distance:
+            bar.lat && bar.lng ? getDistance(lat, lng, bar.lat, bar.lng) : 9999,
         }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 50);
+        .sort((a, b) => a.distance - b.distance);
+    } else {
+      // Ohne Standort sortieren wir nach dem Verifizierungs-Score
+      bars = bars.sort(
+        (a, b) => (b.verification_score || 0) - (a.verification_score || 0),
+      );
     }
-  }
-  // Fall B: Immer noch keine Koordinaten (Suche war kein Ort, sondern z.B. "Irish Pub")
-  else if (query) {
-    const { data } = await supabase
-      .from("bars")
-      .select("*")
-      .or(`name.ilike.%${query}%,city.ilike.%${query}%`)
-      .limit(50);
-    bars = data || [];
-  } else {
-    // Default
-    const { data } = await supabase
-      .from("bars")
-      .select("*")
-      .order("verification_score", { ascending: false })
-      .limit(50);
-    bars = data || [];
+
+    // Performance-Sicherung
+    bars = bars.slice(0, 100);
   }
 
   return (
-    <SearchClient
-      bars={bars}
-      query={query}
-      initialLat={lat}
-      initialLng={lng}
-      isUserLocation={isUserLocation}
-    />
+    <Suspense fallback={<div>Suche läuft...</div>}>
+      <SearchClient
+        bars={bars}
+        query={query}
+        initialLat={lat}
+        initialLng={lng}
+        isUserLocation={isUserLocation}
+      />
+    </Suspense>
   );
 }

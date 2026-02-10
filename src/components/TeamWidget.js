@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { createClient } from "@supabase/supabase-js";
+import TeamSelector from "@/components/TeamSelector";
+import { updateHomeTeam } from "@/actions/updateHomeTeam";
 
-// --- STYLES ---
+// --- STYLES (Dein bestehendes Design) ---
 const WidgetCard = styled.div`
   background: linear-gradient(135deg, #ffffff 0%, #f4f6f8 100%);
   border: 1px solid #e1e4e8;
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  margin-top: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  margin-top: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
 `;
 
 const TeamName = styled.h3`
@@ -23,132 +26,220 @@ const TeamName = styled.h3`
 `;
 
 const Label = styled.div`
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #888;
-  font-weight: 600;
-`;
-
-const InputGroup = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-`;
-
-const Input = styled.input`
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  &:focus {
-    outline: 2px solid #0070f3;
-    border-color: transparent;
-  }
+  letter-spacing: 1.2px;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 10px;
 `;
 
 const SaveButton = styled.button`
   background: #0070f3;
   color: white;
   border: none;
-  padding: 0 16px;
+  padding: 10px 20px;
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
   &:hover {
     background: #005bb5;
+  }
+  &:disabled {
+    background: #ccc;
+    cursor: default;
   }
 `;
 
 const AddButton = styled.button`
-  background: transparent;
-  border: 1px dashed #bbb;
-  color: #666;
-  padding: 10px 20px;
-  border-radius: 8px;
+  background: white;
+  border: 2px dashed #cbd5e1;
+  color: #64748b;
+  padding: 15px;
+  border-radius: 12px;
   cursor: pointer;
   width: 100%;
-  margin-top: 5px;
+  font-weight: 600;
   &:hover {
     border-color: #0070f3;
     color: #0070f3;
-    background: #f0f7ff;
+    background: #f0f9ff;
   }
 `;
 
-// Supabase Client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-);
+const StatusBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: ${(props) => (props.$verified ? "#dcfce7" : "#fffbeb")};
+  color: ${(props) => (props.$verified ? "#166534" : "#b45309")};
+  border: 1px solid ${(props) => (props.$verified ? "#86efac" : "#fcd34d")};
+  margin-top: 5px;
+`;
 
-export default function TeamWidget({ barId, initialTeam }) {
-  const [team, setTeam] = useState(initialTeam);
+const ConfirmButton = styled.button`
+  background: #fff;
+  border: 1px solid #22c55e;
+  color: #22c55e;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f0fdf4;
+  }
+
+  &:disabled {
+    border-color: #e2e8f0;
+    color: #94a3b8;
+    background: #f8fafc;
+    cursor: default;
+  }
+`;
+
+export default function TeamWidget({ bar }) {
+  const [team, setTeam] = useState(bar.home_team);
+  const [votes, setVotes] = useState(bar.home_team_votes || 0);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState("");
+  const [newTeamName, setNewTeamName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
-  const handleSave = async () => {
-    if (!inputValue.trim()) return;
+  // Check LocalStorage beim Laden
+  useEffect(() => {
+    const voted = localStorage.getItem(`team_vote_${bar.id}`);
+    if (voted) setHasVoted(true);
+  }, [bar.id]);
+
+  // Funktion 1: Neues Team speichern
+  const handleSaveNew = async () => {
+    if (!newTeamName) return;
     setLoading(true);
 
-    // Update in Supabase
-    const { error } = await supabase
-      .from("bars")
-      .update({ home_team: inputValue })
-      .eq("id", barId);
+    // Optimistic UI
+    setTeam(newTeamName);
+    setVotes(1);
+    setIsEditing(false);
+    setHasVoted(true);
+    localStorage.setItem(`team_vote_${bar.id}`, "true");
 
-    if (error) {
-      alert("Fehler beim Speichern");
-    } else {
-      setTeam(inputValue);
-      setIsEditing(false);
-      // Kleiner Gamification Effekt
-      alert(`🎉 Sauber! Du hast "${inputValue}" als Heimteam eingetragen.`);
-    }
+    await updateHomeTeam(bar.id, newTeamName, true); // true = Neuer Eintrag
     setLoading(false);
   };
 
-  // ZUSTAND 1: Team ist bekannt
+  // Funktion 2: Bestehendes Team bestätigen
+  const handleConfirm = async () => {
+    if (hasVoted) return;
+    setLoading(true);
+
+    // Optimistic UI
+    setVotes((prev) => prev + 1);
+    setHasVoted(true);
+    localStorage.setItem(`team_vote_${bar.id}`, "true");
+
+    await updateHomeTeam(bar.id, null, false); // false = Nur Vote hochzählen
+    setLoading(false);
+  };
+
+  // Status-Logik: Ab 3 Stimmen gilt es als "Verifiziert"
+  const isVerified = votes >= 3;
+
+  // --- ZUSTAND 1: Team ist bekannt ---
   if (team) {
     return (
       <WidgetCard>
         <Label>Heimat von</Label>
-        <div style={{ fontSize: "3rem", margin: "10px 0" }}>👕</div>
+
+        {/* Team Name */}
         <TeamName>{team}</TeamName>
-        {/* Optional: Hier könnte man später "Falsch? Melden" einbauen */}
+
+        {/* Status Badge */}
+        <StatusBadge $verified={isVerified}>
+          {isVerified ? "✅ Verifiziert" : "⚠️ Unbestätigt"}
+          <span>
+            • {votes} {votes === 1 ? "Stimme" : "Stimmen"}
+          </span>
+        </StatusBadge>
+
+        {/* Voting Bereich */}
+        <div style={{ marginTop: "15px" }}>
+          {!hasVoted ? (
+            <ConfirmButton onClick={handleConfirm} disabled={loading}>
+              👍 Stimmt, hier sind {team} Fans!
+            </ConfirmButton>
+          ) : (
+            <div
+              style={{
+                color: "#166534",
+                fontSize: "0.9rem",
+                marginTop: "10px",
+                fontWeight: "500",
+              }}
+            >
+              Danke für deine Bestätigung!
+            </div>
+          )}
+        </div>
       </WidgetCard>
     );
   }
 
-  // ZUSTAND 2: Eingabe-Modus
+  // --- ZUSTAND 2: Eingabe-Modus ---
   if (isEditing) {
     return (
       <WidgetCard>
         <Label>Welches Team regiert hier?</Label>
-        <InputGroup>
-          <Input
-            placeholder="z.B. Hamburger SV"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            autoFocus
+
+        <div style={{ textAlign: "left", marginTop: "10px" }}>
+          {/* Hier nutzen wir deine neue Autocomplete Komponente */}
+          <TeamSelector
+            value={newTeamName}
+            onChange={(val) => setNewTeamName(val)}
           />
-          <SaveButton onClick={handleSave} disabled={loading}>
+        </div>
+
+        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+          <button
+            onClick={() => setIsEditing(false)}
+            style={{
+              background: "transparent",
+              border: "1px solid #ddd",
+              padding: "10px",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            Abbrechen
+          </button>
+          <SaveButton
+            onClick={handleSaveNew}
+            disabled={loading || !newTeamName}
+          >
             {loading ? "..." : "Speichern"}
           </SaveButton>
-        </InputGroup>
+        </div>
       </WidgetCard>
     );
   }
 
-  // ZUSTAND 3: Kein Team, Button zum Eintragen
+  // --- ZUSTAND 3: Leer (Hinzufügen) ---
   return (
     <WidgetCard>
       <Label>Heim-Mannschaft</Label>
-      <div style={{ margin: "15px 0", color: "#ccc", fontStyle: "italic" }}>
-        Noch nicht eingetragen
-      </div>
+      <p style={{ fontSize: "0.9rem", color: "#666", marginBottom: "15px" }}>
+        Weißt du, welches Fan-Lager sich hier trifft?
+      </p>
       <AddButton onClick={() => setIsEditing(true)}>
         + Team hinzufügen
       </AddButton>

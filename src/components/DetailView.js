@@ -4,6 +4,8 @@ import styled from "styled-components";
 import Link from "next/link";
 import VerificationButton from "./VerificationButton";
 import TeamWidget from "./TeamWidget";
+import CompetitionVoting from "./CompetitionVoting";
+import BackButton from "./BackButton";
 
 // --- STYLES ---
 const Container = styled.div`
@@ -43,13 +45,12 @@ const Meta = styled.div`
   gap: 15px;
   font-size: 0.95rem;
   align-items: center;
+  flex-wrap: wrap;
 `;
 
 const Badge = styled.span`
-  background: ${(props) =>
-    props.$status === "OPERATIONAL" ? "#e6f4ea" : "#fce8e6"};
-  color: ${(props) =>
-    props.$status === "OPERATIONAL" ? "#1e7e34" : "#c5221f"};
+  background: #eff6ff;
+  color: #1d4ed8;
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: bold;
@@ -64,9 +65,6 @@ const SectionTitle = styled.h2`
   font-size: 1.4rem;
   margin-bottom: 1rem;
   color: #333;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 `;
 
 const Grid = styled.div`
@@ -82,27 +80,68 @@ const Card = styled.div`
   border: 1px solid #eee;
 `;
 
-const OpeningHours = styled.ul`
+const OpeningHoursList = styled.ul`
   list-style: none;
   padding: 0;
   margin: 0;
-  font-size: 0.9rem;
-  color: #555;
+  font-size: 0.95rem;
+  color: #444;
+
   li {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f5f5f5;
+    display: flex;
+    justify-content: space-between;
+
+    &:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
   }
 `;
 
+const UnverifiedBadge = styled.span`
+  background: #fffbeb; /* Helles Gelb */
+  color: #b45309; /* Dunkles Gelb/Orange */
+  border: 1px solid #fcd34d;
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+`;
+
 export default function DetailView({ bar }) {
-  // Google Daten holen (falls vorhanden)
-  const gMeta = bar.google_meta || {};
-  const contact = bar.contact_info || {};
-  const status = gMeta.status || "UNKNOWN";
+  // --- SMARTE FUNKTION FÜR ÖFFNUNGSZEITEN ---
+  const getFormattedHours = (rawData) => {
+    if (!rawData) return [];
+
+    // Versuch 1: Ist es JSON (altes Google Format)?
+    try {
+      // Wenn das Parsen klappt und es ein Array ist -> Google Format
+      const parsed = JSON.parse(rawData);
+      if (Array.isArray(parsed)) {
+        return parsed; // Gibt z.B. ["Monday: Closed", "Tuesday: 5:00..."] zurück
+      }
+    } catch (e) {
+      // Wenn Fehler: Es war kein JSON, also ignorieren und weiter machen
+    }
+
+    // Versuch 2: Es ist normaler Text (Manuelles Format)
+    // Wir teilen am Zeilenumbruch (\n)
+    return rawData.split("\n").filter((line) => line.trim() !== "");
+  };
+
+  const hoursList = getFormattedHours(bar.opening_hours);
+  const getSafeUrl = (url) =>
+    !url ? "" : url.startsWith("http") ? url : `https://${url}`;
 
   return (
     <Container>
-      <BackLink href="/">← Zurück zur Übersicht</BackLink>
-
+      <BackButton />
       <Header>
         <div
           style={{
@@ -115,92 +154,47 @@ export default function DetailView({ bar }) {
             <Title>{bar.name}</Title>
             <Meta>
               <span>
-                📍 {bar.address}, {bar.zip_code} {bar.city}
+                📍 {bar.address ? bar.address : `${bar.zip_code} ${bar.city}`}
               </span>
-              <Badge $status={status}>
-                {status === "OPERATIONAL" ? "Geöffnet" : "Geschlossen"}
-              </Badge>
+              {bar.home_team && <Badge>⚽ {bar.home_team}</Badge>}
+              {bar.verification_score === 1 && (
+                <UnverifiedBadge>Noch nicht verifiziert</UnverifiedBadge>
+              )}
             </Meta>
-            {gMeta.rating && (
-              <div
-                style={{ marginTop: 10, color: "#f59e0b", fontWeight: "bold" }}
-              >
-                ★ {gMeta.rating}{" "}
-                <span style={{ color: "#999", fontWeight: "normal" }}>
-                  ({gMeta.reviews} Reviews)
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </Header>
 
-      {/* DER GAMIFICATION BEREICH */}
+      {/* GAMIFICATION / FEATURES */}
       <Section>
-        <SectionTitle>
-          📡 Wer überträgt was?
-          <span
-            style={{ fontSize: "0.8rem", fontWeight: "normal", color: "#666" }}
-          >
-            Hilf der Community & sammle XP!
-          </span>
-        </SectionTitle>
-        <Grid>
-          {/* Hier rufen wir unsere Smart Buttons auf */}
-          <Card>
-            <div
-              style={{ marginBottom: 10, fontWeight: "bold", color: "#0072bc" }}
-            >
-              Sky / WOW
-            </div>
-            <VerificationButton
-              barId={bar.id}
-              feature="sky"
-              label="Gibt's Sky?"
-              icon="📺"
-            />
-          </Card>
+        <CompetitionVoting bar={bar} />
+      </Section>
 
-          <Card>
-            <div
-              style={{ marginBottom: 10, fontWeight: "bold", color: "#1d1d1d" }}
-            >
-              DAZN
-            </div>
-            <VerificationButton
-              barId={bar.id}
-              feature="dazn"
-              label="Gibt's DAZN?"
-              icon="⚽"
-            />
-          </Card>
-
-          <Card>
-            <div
-              style={{ marginBottom: 10, fontWeight: "bold", color: "#28a745" }}
-            >
-              Free-TV
-            </div>
-            <VerificationButton
-              barId={bar.id}
-              feature="free_tv"
-              label="ARD/ZDF?"
-              icon="📡"
-            />
-          </Card>
-        </Grid>
+      {/*Home Team Selection */}
+      <Section>
+        <TeamWidget bar={bar} />
       </Section>
 
       {/* ÖFFNUNGSZEITEN */}
-      {bar.opening_hours && (
+      {hoursList.length > 0 && (
         <Section>
           <SectionTitle>🕒 Öffnungszeiten</SectionTitle>
           <Card>
-            <OpeningHours>
-              {bar.opening_hours.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </OpeningHours>
+            <OpeningHoursList>
+              {hoursList.map((line, i) => {
+                // Optional: Wir versuchen, den Tag fett zu machen, wenn ein Doppelpunkt da ist
+                const parts = line.split(": ");
+                if (parts.length > 1) {
+                  return (
+                    <li key={i}>
+                      <strong>{parts[0]}</strong>
+                      <span>{parts.slice(1).join(": ")}</span>
+                    </li>
+                  );
+                }
+                return <li key={i}>{line}</li>;
+              })}
+            </OpeningHoursList>
           </Card>
         </Section>
       )}
@@ -209,11 +203,11 @@ export default function DetailView({ bar }) {
       <Section>
         <SectionTitle>📞 Kontakt</SectionTitle>
         <Card>
-          {contact.website && (
+          {bar.contact_info.website && (
             <div style={{ marginBottom: 8 }}>
               🌐{" "}
               <a
-                href={contact.website}
+                href={getSafeUrl(bar.contact_info.website)}
                 target="_blank"
                 style={{ color: "#0070f3" }}
               >
@@ -221,12 +215,21 @@ export default function DetailView({ bar }) {
               </a>
             </div>
           )}
-          {contact.phone && <div>📞 {contact.phone}</div>}
-          {!contact.website && !contact.phone && (
+          {bar.contact_info.phone && (
+            <div style={{ marginBottom: 8 }}>
+              📞{" "}
+              <a
+                href={`tel:${bar.contact_info.phone}`}
+                style={{ color: "inherit", textDecoration: "none" }}
+              >
+                {bar.contact_info.phone}
+              </a>
+            </div>
+          )}
+          {!bar.contact_info.website && !bar.contact_info.phone && (
             <div style={{ color: "#999" }}>Keine Kontaktdaten hinterlegt.</div>
           )}
         </Card>
-        <TeamWidget barId={bar.id} initialTeam={bar.home_team} />
       </Section>
     </Container>
   );
