@@ -12,17 +12,19 @@ const supabase = createClient(
 export const revalidate = 0; // Immer frisch laden
 
 export default async function Home() {
-  // Wir laden für die Home-Page einfach die Top 10 Bars (ohne Filter)
+  // Wir laden für die Home-Page die Bars (ohne Filter)
   const { data: bars, error } = await supabase
     .from("bars")
     .select(
       "id, name, city, zip_code, slug, features, google_meta, lat, lng, home_team",
+      "verification_score",
     )
-    .limit(12) // Nicht zu viele
+    .or("google_meta.is.null,google_meta->>status.eq.OPERATIONAL")
     .order("verification_score", { ascending: false });
 
   const barsWithGeo = bars?.filter((b) => b.lat && b.lng) || [];
 
+  const popularBars = bars?.slice(0, 12);
   return (
     <main style={{ background: "#f8f9fa", minHeight: "100vh" }}>
       {/* --- 1. HERO SECTION (Der Hingucker) --- */}
@@ -102,7 +104,7 @@ export default async function Home() {
           </Link>
         </div>
 
-        <BarList bars={bars || []} />
+        <BarList bars={popularBars || []} />
       </div>
     </main>
   );
