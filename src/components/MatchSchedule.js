@@ -414,9 +414,6 @@ export default function MatchSchedule({ bar, matches }) {
                         })}{" "}
                         Uhr
                       </span>
-                      {match.broadcaster && (
-                        <BroadcasterBadge>{match.broadcaster}</BroadcasterBadge>
-                      )}
                     </MatchHeader>
                     <Teams>
                       {match.home_team} <span className="vs">vs.</span>{" "}
