@@ -7,7 +7,8 @@ import styled from "styled-components";
 import MapBarList from "@/components/MapBarList";
 import MapWrapper from "@/components/MapWrapper";
 import SearchBar from "@/components/SearchBar";
-import { COMPETITIONS } from "@/lib/constants"; // Wir nutzen deine vorhandenen Wettbewerbe
+import TeamSelector from "@/components/TeamSelector"; // Nutzt deine vorhandene Komponente
+import { COMPETITIONS } from "@/lib/constants";
 
 // --- STYLES ---
 
@@ -54,16 +55,18 @@ const MapPanel = styled.div`
   z-index: 10;
 `;
 
-// --- NEU: FILTER STYLES ---
 const FilterContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+`;
+
+const ChipScroll = styled.div`
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding: 12px 20px;
-  background: white;
-  border-bottom: 1px solid #f0f0f0;
-
-  /* Scrollbar verstecken */
   &::-webkit-scrollbar {
     display: none;
   }
@@ -82,11 +85,10 @@ const FilterChip = styled.button`
   background: ${(props) => (props.$active ? "#0070f3" : "white")};
   color: ${(props) => (props.$active ? "white" : "#64748b")};
   transition: all 0.2s;
+`;
 
-  &:hover {
-    border-color: #0070f3;
-    color: ${(props) => (props.$active ? "white" : "#0070f3")};
-  }
+const TeamSearchWrapper = styled.div`
+  padding: 0 20px 12px 20px;
 `;
 
 const ToggleButton = styled.button`
@@ -124,22 +126,56 @@ export default function SearchClient({
   const [selectedBarId, setSelectedBarId] = useState(null);
   const [showMapMobile, setShowMapMobile] = useState(false);
 
-  // --- NEU: FILTER STATE ---
-  const [activeFilter, setActiveFilter] = useState(null); // Speichert die Wettbewerbs-ID (z.B. 'bundesliga')
+  // --- FILTER STATE ---
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [showTeamSearch, setShowTeamSearch] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // --- NEU: FILTER LOGIK ---
+  // --- FILTER LOGIK ---
   const filteredBars = useMemo(() => {
-    if (!activeFilter) return bars;
+    let result = bars;
 
-    return bars.filter((bar) => {
-      // Wir prüfen, ob der Wettbewerb in den competition_votes existiert
-      // und ob er mehr als 0 Stimmen hat
-      return bar.competition_votes && bar.competition_votes[activeFilter] > 0;
-    });
-  }, [bars, activeFilter]);
+    // 1. Filter nach Wettbewerb
+    if (activeFilter) {
+      result = result.filter(
+        (bar) =>
+          bar.competition_votes && bar.competition_votes[activeFilter] > 0,
+      );
+    }
+
+    // 2. Filter nach Team (Heimteam)
+    if (selectedTeam) {
+      result = result.filter(
+        (bar) =>
+          bar.home_team &&
+          bar.home_team.toLowerCase().includes(selectedTeam.toLowerCase()),
+      );
+    }
+
+    return result;
+  }, [bars, activeFilter, selectedTeam]);
+
+  // --- NEU: DYNAMISCHE ZENTRIERUNG DER KARTE ---
+  // Die Karte springt nun zum ersten Ergebnis der Suche oder zum gewählten Marker
+  const mapCenter = useMemo(() => {
+    if (selectedBarId) {
+      const selectedBar = bars.find((b) => b.id === selectedBarId);
+      if (selectedBar) return [selectedBar.lat, selectedBar.lng];
+    }
+
+    if (filteredBars.length > 0) {
+      return [filteredBars[0].lat, filteredBars[0].lng];
+    }
+
+    if (initialLat && initialLng) {
+      return [initialLat, initialLng];
+    }
+
+    return [53.5511, 9.9937]; // Fallback auf Hamburg
+  }, [filteredBars, selectedBarId, initialLat, initialLng, bars]);
 
   const handleListClick = (barId, slug) => {
     if (selectedBarId === barId) {
@@ -152,13 +188,7 @@ export default function SearchClient({
     }
   };
 
-  const handleMapMarkerClick = (barId) => {
-    setSelectedBarId(barId);
-  };
-
   const toggleView = () => setShowMapMobile(!showMapMobile);
-
-  const center = initialLat && initialLng ? [initialLat, initialLng] : null;
 
   return (
     <MainContainer>
@@ -182,33 +212,80 @@ export default function SearchClient({
           <div style={{ marginTop: "15px", fontSize: "0.9rem", color: "#666" }}>
             <strong>{filteredBars.length}</strong> Treffer{" "}
             {query && `für "${query}"`}
+            {selectedTeam && ` (Fans von ${selectedTeam})`}
           </div>
         </div>
 
-        {/* --- NEU: DIE FILTER LEISTE --- */}
         <FilterContainer>
-          <FilterChip
-            $active={activeFilter === null}
-            onClick={() => setActiveFilter(null)}
-          >
-            Alle
-          </FilterChip>
-          {COMPETITIONS.map((comp) => (
+          <ChipScroll>
             <FilterChip
-              key={comp.id}
-              $active={activeFilter === comp.id}
-              onClick={() =>
-                setActiveFilter(comp.id === activeFilter ? null : comp.id)
-              }
+              $active={activeFilter === null && !selectedTeam}
+              onClick={() => {
+                setActiveFilter(null);
+                setSelectedTeam(null);
+                setShowTeamSearch(false);
+              }}
             >
-              {comp.name}
+              Alle
             </FilterChip>
-          ))}
+
+            <FilterChip
+              $active={showTeamSearch || selectedTeam}
+              onClick={() => {
+                setShowTeamSearch(!showTeamSearch);
+                setActiveFilter(null);
+              }}
+            >
+              {selectedTeam ? `🏠 ${selectedTeam}` : "🔍 Nach Team suchen"}
+            </FilterChip>
+
+            {COMPETITIONS.map((comp) => (
+              <FilterChip
+                key={comp.id}
+                $active={activeFilter === comp.id}
+                onClick={() => {
+                  setActiveFilter(comp.id === activeFilter ? null : comp.id);
+                  setSelectedTeam(null);
+                  setShowTeamSearch(false);
+                }}
+              >
+                {comp.name}
+              </FilterChip>
+            ))}
+          </ChipScroll>
+
+          {showTeamSearch && (
+            <TeamSearchWrapper>
+              <TeamSelector
+                value={selectedTeam}
+                onChange={(team) => {
+                  setSelectedTeam(team);
+                  if (team) setActiveFilter(null);
+                }}
+              />
+              {selectedTeam && (
+                <button
+                  onClick={() => setSelectedTeam(null)}
+                  style={{
+                    marginTop: "8px",
+                    background: "none",
+                    border: "none",
+                    color: "#0070f3",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  Suche zurücksetzen
+                </button>
+              )}
+            </TeamSearchWrapper>
+          )}
         </FilterContainer>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
           <MapBarList
-            bars={filteredBars} // WICHTIG: Hier die gefilterten Bars nutzen
+            bars={filteredBars}
             selectedBarId={selectedBarId}
             onBarClick={handleListClick}
           />
@@ -218,11 +295,11 @@ export default function SearchClient({
       {/* RECHTE SPALTE (Karte) */}
       <MapPanel>
         <MapWrapper
-          bars={filteredBars} // WICHTIG: Auch die Karte zeigt nur die gefilterten Bars
-          center={center}
+          bars={filteredBars}
+          center={mapCenter} // Nutzt das dynamisch berechnete mapCenter
           showUserMarker={isUserLocation}
           selectedBarId={selectedBarId}
-          onMarkerClick={handleMapMarkerClick}
+          onMarkerClick={setSelectedBarId}
         />
       </MapPanel>
 
