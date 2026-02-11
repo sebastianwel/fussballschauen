@@ -3,6 +3,14 @@ import BarList from "@/components/BarList";
 import MapWrapper from "@/components/MapWrapper";
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
+import HomeMapSection from "@/components/HomeMapSection";
+import { CommunitySteps } from "@/components/CommunitySteps";
+import { HomeQuickFilters } from "@/components/HomeQuickFilters";
+import { CommunityStats } from "@/components/CommunityStats";
+import { CommunityMission } from "@/components/CommunityMission";
+import { LeagueGrid } from "@/components/LeagueGrid";
+import { PopularCities } from "@/components/PopularCities";
+import { HomeFAQ } from "@/components/HomeFAQ";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -24,7 +32,7 @@ export default async function Home() {
 
   const barsWithGeo = bars?.filter((b) => b.lat && b.lng) || [];
 
-  const popularBars = bars?.slice(0, 12);
+  const popularBars = bars?.slice(0, 50);
   return (
     <main style={{ background: "#f8f9fa", minHeight: "100vh" }}>
       {/* --- 1. HERO SECTION (Der Hingucker) --- */}
@@ -48,6 +56,7 @@ export default async function Home() {
         {/* Die SearchBar (leitet jetzt auf /search weiter) */}
         <div style={{ maxWidth: "600px", margin: "0 auto" }}>
           <SearchBar />
+          <HomeQuickFilters />
         </div>
       </div>
 
@@ -69,9 +78,17 @@ export default async function Home() {
           }}
         >
           {/* Hier eine "kleine" Karte zur Übersicht */}
-          <MapWrapper bars={barsWithGeo} />
+          <HomeMapSection barsWithGeo={barsWithGeo} />
         </div>
       </div>
+
+      {/* --- 4. How it works --- */}
+
+      <CommunitySteps />
+      <CommunityMission />
+      <CommunityStats barsCount={barsWithGeo.length} />
+      <PopularCities />
+      <LeagueGrid />
 
       {/* --- 3. BELIEBTE BARS LISTE --- */}
       <div
@@ -105,6 +122,7 @@ export default async function Home() {
         </div>
 
         <BarList bars={popularBars || []} />
+        <HomeFAQ />
       </div>
     </main>
   );

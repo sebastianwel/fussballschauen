@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import DetailView from "@/components/DetailView";
+import { BarDisclaimer } from "@/components/BarDisclaimer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -144,5 +145,10 @@ export default async function BarPage({ params, searchParams }) {
   };
   // --- ENDE DER SMARTEN ABFRAGE ---
 
-  return <DetailView bar={barWithMatches} returnParams={returnTo} />;
+  return (
+    <>
+      <DetailView bar={barWithMatches} returnParams={returnTo} />
+      <BarDisclaimer />
+    </>
+  );
 }

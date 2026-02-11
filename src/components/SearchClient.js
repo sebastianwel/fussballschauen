@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import styled from "styled-components";
 import MapBarList from "@/components/MapBarList";
 import MapWrapper from "@/components/MapWrapper";
 import SearchBar from "@/components/SearchBar";
-import TeamSelector from "@/components/TeamSelector"; // Nutzt deine vorhandene Komponente
+import TeamSelector from "@/components/TeamSelector";
 import { COMPETITIONS } from "@/lib/constants";
 
-// --- STYLES ---
-
+// --- STYLES (Unverändert übernommen) ---
 const MainContainer = styled.main`
   display: flex;
   height: 100vh;
@@ -36,7 +35,6 @@ const ListPanel = styled.div`
   transform: ${(props) =>
     props.$isMapOpen ? "translateX(-100%)" : "translateX(0)"};
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
   @media (min-width: 768px) {
     position: static;
     transform: none;
@@ -108,42 +106,51 @@ const ToggleButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-
   @media (min-width: 768px) {
     display: none;
   }
 `;
 
-// --- COMPONENT ---
-
-export default function SearchClient({
+// --- INNER COMPONENT (um useSearchParams sicher zu nutzen) ---
+function SearchContent({
   bars,
   query,
   initialLat,
   initialLng,
   isUserLocation,
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // --- STATE ---
+  // Wir initialisieren den Filter direkt aus der URL (?filter=bundesliga)
+  const [activeFilter, setActiveFilter] = useState(
+    () => searchParams.get("filter") || null,
+  );
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [showTeamSearch, setShowTeamSearch] = useState(false);
   const [selectedBarId, setSelectedBarId] = useState(null);
   const [showMapMobile, setShowMapMobile] = useState(false);
 
-  // --- FILTER STATE ---
-  const [activeFilter, setActiveFilter] = useState(null);
-  const [selectedTeam, setSelectedTeam] = useState(null);
-  const [showTeamSearch, setShowTeamSearch] = useState(false);
-
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  // Sync bei URL-Änderung (z.B. Klick auf HomeQuickFilter)
+  useEffect(() => {
+    const filterFromUrl = searchParams.get("filter");
+    if (filterFromUrl) {
+      setActiveFilter(filterFromUrl);
+      setSelectedTeam(null);
+    }
+  }, [searchParams]);
 
   // --- FILTER LOGIK ---
   const filteredBars = useMemo(() => {
     let result = bars;
 
-    // 1. Filter nach Wettbewerb
+    // 1. Filter nach Wettbewerb (ID muss mit constants.js übereinstimmen)
     if (activeFilter) {
-      result = result.filter(
-        (bar) =>
-          bar.competition_votes && bar.competition_votes[activeFilter] > 0,
-      );
+      result = result.filter((bar) => {
+        const votes = bar.competition_votes;
+        return votes && typeof votes === "object" && votes[activeFilter] > 0;
+      });
     }
 
     // 2. Filter nach Team (Heimteam)
@@ -158,23 +165,19 @@ export default function SearchClient({
     return result;
   }, [bars, activeFilter, selectedTeam]);
 
-  // --- NEU: DYNAMISCHE ZENTRIERUNG DER KARTE ---
-  // Die Karte springt nun zum ersten Ergebnis der Suche oder zum gewählten Marker
+  // --- KARTE ZENTRIEREN ---
   const mapCenter = useMemo(() => {
     if (selectedBarId) {
       const selectedBar = bars.find((b) => b.id === selectedBarId);
       if (selectedBar) return [selectedBar.lat, selectedBar.lng];
     }
-
     if (filteredBars.length > 0) {
       return [filteredBars[0].lat, filteredBars[0].lng];
     }
-
     if (initialLat && initialLng) {
       return [initialLat, initialLng];
     }
-
-    return [53.5511, 9.9937]; // Fallback auf Hamburg
+    return [51.16336, 10.44768];
   }, [filteredBars, selectedBarId, initialLat, initialLng, bars]);
 
   const handleListClick = (barId, slug) => {
@@ -188,28 +191,14 @@ export default function SearchClient({
     }
   };
 
-  const toggleView = () => setShowMapMobile(!showMapMobile);
-
   return (
     <MainContainer>
-      {/* LINKE SPALTE (Liste) */}
       <ListPanel $isMapOpen={showMapMobile}>
         <div style={{ padding: "20px", borderBottom: "1px solid #f0f0f0" }}>
-          <Link href="/" style={{ textDecoration: "none", color: "#1a1a1a" }}>
-            <h1
-              style={{
-                fontSize: "1.2rem",
-                fontWeight: "800",
-                marginBottom: "16px",
-              }}
-            >
-              ⚽️ FUSSBALLSCHAUEN
-            </h1>
-          </Link>
-
           <SearchBar initialQuery={query} />
-
-          <div style={{ marginTop: "15px", fontSize: "0.9rem", color: "#666" }}>
+          <div
+            style={{ marginTop: "15px", fontSize: "0.9rem", color: "#64748b" }}
+          >
             <strong>{filteredBars.length}</strong> Treffer{" "}
             {query && `für "${query}"`}
             {selectedTeam && ` (Fans von ${selectedTeam})`}
@@ -224,6 +213,7 @@ export default function SearchClient({
                 setActiveFilter(null);
                 setSelectedTeam(null);
                 setShowTeamSearch(false);
+                router.push("/search"); // URL aufräumen
               }}
             >
               Alle
@@ -236,7 +226,7 @@ export default function SearchClient({
                 setActiveFilter(null);
               }}
             >
-              {selectedTeam ? `🏠 ${selectedTeam}` : "🔍 Nach Team suchen"}
+              {selectedTeam ? `🏠 ${selectedTeam}` : "🔍 Team-Filter"}
             </FilterChip>
 
             {COMPETITIONS.map((comp) => (
@@ -244,9 +234,13 @@ export default function SearchClient({
                 key={comp.id}
                 $active={activeFilter === comp.id}
                 onClick={() => {
-                  setActiveFilter(comp.id === activeFilter ? null : comp.id);
+                  const newFilter = activeFilter === comp.id ? null : comp.id;
+                  setActiveFilter(newFilter);
                   setSelectedTeam(null);
                   setShowTeamSearch(false);
+                  // URL synchronisieren
+                  if (newFilter) router.push(`/search?filter=${newFilter}`);
+                  else router.push("/search");
                 }}
               >
                 {comp.name}
@@ -292,18 +286,20 @@ export default function SearchClient({
         </div>
       </ListPanel>
 
-      {/* RECHTE SPALTE (Karte) */}
       <MapPanel>
         <MapWrapper
           bars={filteredBars}
-          center={mapCenter} // Nutzt das dynamisch berechnete mapCenter
+          center={mapCenter}
           showUserMarker={isUserLocation}
           selectedBarId={selectedBarId}
           onMarkerClick={setSelectedBarId}
         />
       </MapPanel>
 
-      <ToggleButton $isMapOpen={showMapMobile} onClick={toggleView}>
+      <ToggleButton
+        $isMapOpen={showMapMobile}
+        onClick={() => setShowMapMobile(!showMapMobile)}
+      >
         {showMapMobile ? (
           <>
             <span role="img">📜</span> Liste
@@ -315,5 +311,14 @@ export default function SearchClient({
         )}
       </ToggleButton>
     </MainContainer>
+  );
+}
+
+// Export mit Suspense (notwendig für useSearchParams in Next.js)
+export default function SearchClient(props) {
+  return (
+    <Suspense fallback={<div>Lade Suche...</div>}>
+      <SearchContent {...props} />
+    </Suspense>
   );
 }
