@@ -159,7 +159,7 @@ export default function TeamWidget({ bar }) {
   if (team) {
     return (
       <WidgetCard>
-        <Label>Heimat von</Label>
+        <Label>Haus-Team</Label>
 
         {/* Team Name */}
         <TeamName>{team}</TeamName>

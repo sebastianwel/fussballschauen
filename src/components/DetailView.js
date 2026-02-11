@@ -6,6 +6,7 @@ import VerificationButton from "./VerificationButton";
 import TeamWidget from "./TeamWidget";
 import CompetitionVoting from "./CompetitionVoting";
 import BackButton from "./BackButton";
+import MatchSchedule from "./MatchSchedule";
 
 // --- STYLES ---
 const Container = styled.div`
@@ -170,6 +171,9 @@ export default function DetailView({ bar }) {
         <CompetitionVoting bar={bar} />
       </Section>
 
+      <section>
+        <MatchSchedule bar={bar} matches={bar.upcomingMatches} />
+      </section>
       {/*Home Team Selection */}
       <Section>
         <TeamWidget bar={bar} />

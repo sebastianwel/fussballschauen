@@ -87,7 +87,7 @@ export default async function SearchPage({ searchParams }) {
     }
 
     // Performance-Sicherung
-    bars = bars.slice(0, 100);
+    bars = bars.slice(0, 50);
   }
 
   return (
