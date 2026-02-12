@@ -63,7 +63,7 @@ def run_sync():
             
             try:
                 response = requests.get(url)
-                time.sleep(1.5) # Etwas schnelleres Polling ist meist okay
+                time.sleep(2.5) # Etwas schnelleres Polling ist meist okay
                 
                 data = response.json()
                 events = data.get('events', [])
