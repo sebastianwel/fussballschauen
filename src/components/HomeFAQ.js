@@ -5,16 +5,17 @@ import styled from "styled-components";
 
 const Section = styled.section`
   max-width: 800px;
-  margin: 100px auto;
+  margin: 80px auto;
   padding: 0 20px;
 `;
 
 const Title = styled.h2`
-  font-size: 2.2rem;
-  font-weight: 800;
+  font-size: 2rem;
+  font-weight: 900;
   text-align: center;
-  margin-bottom: 50px;
+  margin-bottom: 40px;
   color: #0f172a;
+  letter-spacing: -0.5px;
 `;
 
 const Accordion = styled.div`
@@ -25,10 +26,10 @@ const Accordion = styled.div`
 
 const Item = styled.div`
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   background: white;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease;
 
   &:hover {
     border-color: #cbd5e1;
@@ -37,7 +38,7 @@ const Item = styled.div`
 
 const Question = styled.button`
   width: 100%;
-  padding: 20px 24px;
+  padding: 18px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -45,25 +46,25 @@ const Question = styled.button`
   border: none;
   cursor: pointer;
   text-align: left;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #1e293b;
 
   span.icon {
+    font-size: 0.8rem;
     transition: transform 0.3s ease;
     transform: ${(props) => (props.$isOpen ? "rotate(180deg)" : "rotate(0)")};
-    color: #64748b;
+    color: #94a3b8;
   }
 `;
 
 const Answer = styled.div`
   padding: ${(props) => (props.$isOpen ? "0 24px 20px 24px" : "0 24px")};
-  max-height: ${(props) =>
-    props.$isOpen ? "400px" : "0"}; // Erhöht für längere Texte
+  max-height: ${(props) => (props.$isOpen ? "500px" : "0")};
   opacity: ${(props) => (props.$isOpen ? "1" : "0")};
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #64748b;
+  color: #475569;
   line-height: 1.6;
   font-size: 0.95rem;
 `;
@@ -73,20 +74,20 @@ export function HomeFAQ() {
 
   const faqs = [
     {
-      q: "Sind die Angaben zu den Spielen garantiert?",
-      a: "Nein, alle Angaben erfolgen ohne Gewähr. Fussballschauen.de ist eine Community-Plattform. Die Informationen basieren auf den Angaben der Bar-Betreiber und werden durch das Feedback der Fans vor Ort verfeinert. Wir empfehlen im Zweifel immer einen kurzen Blick auf die aktuellen Community-Bestätigungen in der App.",
+      q: "Läuft das Spiel da dann wirklich?",
+      a: "Hand aufs Herz: Eine 100%ige Garantie gibt es im Fußball (und bei uns) nicht. Die Infos kommen entweder direkt vom Wirt oder von Fans aus der Community. Wenn du sichergehen willst: Achte auf das 'Verifiziert'-Häkchen – da hat der Inhaber das Programm höchstpersönlich bestätigt.",
     },
     {
-      q: "Was mache ich, wenn eine Info falsch ist?",
-      a: "Das ist der Kern unserer Seite! Wenn du siehst, dass ein Spiel doch nicht läuft, nutze einfach den 'Fehler melden' Button in der Detailansicht. So hilfst du anderen Fans, nicht vor verschlossener Tür zu landen.",
+      q: "Was, wenn ich vor einer dunklen Leinwand stehe?",
+      a: "Richtig nervig, kennen wir. Wenn eine Info mal nicht stimmt, klick bitte sofort auf 'Fehler melden'. Damit rettest du dem nächsten Fan den Nachmittag und wir können die Daten direkt korrigieren. Nur so funktioniert der Laden.",
     },
     {
-      q: "Wer pflegt die Daten der Bars ein?",
-      a: "Die Profile werden teils von den Bar-Besitzern selbst und teils von engagierten Fans gepflegt. Da sich Lizenzen und Öffnungszeiten ändern können, lebt die Seite vom Mitmachen der Community.",
+      q: "Woher kommen die ganzen Kneipen-Infos?",
+      a: "Das ist Teamwork. Ein Teil der Wirte pflegt das Programm selbst ein, den Rest erledigen engagierte Fans. Wenn deine Stammkneipe noch fehlt oder die Infos alt sind: Du kannst jede Bar selbst bearbeiten oder neu hinzufügen.",
     },
     {
-      q: "Ist die Nutzung für mich kostenlos?",
-      a: "Ja, die Suche und das Mitwirken in der Community sind komplett kostenlos. Unser Ziel ist es lediglich, die Suche nach dem nächsten Fußballabend für alle einfacher zu machen.",
+      q: "Kostet mich die Nutzung was?",
+      a: "Keinen Cent. wolaeuftfussball.de ist ein Projekt von Fans für Fans. Wir wollen einfach nur, dass niemand mehr das Derby verpasst, nur weil er in der falschen Kneipe gelandet ist.",
     },
   ];
 
@@ -96,7 +97,7 @@ export function HomeFAQ() {
 
   return (
     <Section>
-      <Title>Häufig gestellte Fragen</Title>
+      <Title>Häufig gefragt</Title>
       <Accordion>
         {faqs.map((faq, i) => (
           <Item key={i}>
@@ -114,10 +115,11 @@ export function HomeFAQ() {
           marginTop: "30px",
           fontSize: "0.8rem",
           color: "#94a3b8",
+          fontStyle: "italic",
         }}
       >
-        * Alle Angaben ohne Gewähr. Die Verfügbarkeit von Übertragungen hängt
-        von den individuellen Lizenzen der Gastronomen ab.
+        * Wir übernehmen keine Haftung für verpasste Tore oder falsch gezapftes
+        Bier. Die Übertragungsrechte liegen bei den jeweiligen Gastronomen.
       </p>
     </Section>
   );

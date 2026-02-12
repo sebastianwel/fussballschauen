@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { voteMatch } from "@/actions/voteMatch";
+// Falls du die Action schon angelegt hast, hier importieren:
+import { toggleMatchStatus } from "@/actions/toggleMatchStatus";
+import { useRouter } from "next/navigation";
 
-// --- STYLES ---
+// --- STYLES (Deine Original-Styles + Admin Erweiterungen) ---
 const Container = styled.div`
   margin-top: 20px;
 `;
@@ -77,15 +80,16 @@ const MatchCard = styled.div`
     transform 0.2s,
     opacity 0.2s;
 
-  /* Dezenterer Rahmen für umstrittene Spiele */
   border: 1px solid
     ${(props) => {
+      if (props.$status === "owner") return " #86efac"; // Gold Border für Inhaber
       if (props.$status === "home" || props.$status === "confirmed")
         return "#86efac";
       return "#e2e8f0";
     }};
 
   background: ${(props) => {
+    if (props.$status === "owner") return "#d2f2db";
     if (props.$status === "home") return "#f0fdf4";
     return "white";
   }};
@@ -103,11 +107,13 @@ const TopStatusBadge = styled.div`
   align-self: flex-start;
 
   background: ${(props) => {
+    if (props.$type === "owner") return "#86efac"; // Gold-Badge
     if (props.$type === "home" || props.$type === "confirmed") return "#dcfce7";
     return "#f1f5f9";
   }};
 
   color: ${(props) => {
+    if (props.$type === "owner") return "#166534";
     if (props.$type === "home" || props.$type === "confirmed") return "#166534";
     return "#64748b";
   }};
@@ -121,18 +127,6 @@ const MatchHeader = styled.div`
   font-size: 0.8rem;
   color: #64748b;
   font-weight: 600;
-`;
-
-const BroadcasterBadge = styled.span`
-  background: white;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 `;
 
 const Teams = styled.div`
@@ -151,7 +145,6 @@ const Teams = styled.div`
   }
 `;
 
-// --- DEZENTERER HINWEIS ---
 const InfoText = styled.div`
   font-size: 0.75rem;
   font-weight: 500;
@@ -180,7 +173,7 @@ const ConfirmButton = styled.button`
   width: 100%;
   padding: 10px 12px;
   border-radius: 50px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.9rem;
   cursor: ${(props) => (props.$hasVoted ? "default" : "pointer")};
   display: flex;
@@ -191,6 +184,16 @@ const ConfirmButton = styled.button`
 
   &:hover {
     background: ${(props) => (props.$hasVoted ? "#dcfce7" : "#f8fafc")};
+  }
+`;
+
+// Spezieller Admin-Button
+const AdminActionButton = styled(ConfirmButton)`
+  background: ${(props) => (props.$isConfirmed ? "#ef4444" : "#22c55e")};
+  color: white;
+  border: none;
+  &:hover {
+    background: ${(props) => (props.$isConfirmed ? "#dc2626" : "#16a34a")};
   }
 `;
 
@@ -253,7 +256,9 @@ const getDayLabel = (dateString) => {
   return formatted;
 };
 
-export default function MatchSchedule({ bar, matches }) {
+// --- KOMPONENTE ---
+export default function MatchSchedule({ bar, matches, isAdmin }) {
+  const router = useRouter();
   const [localUpvotes, setLocalUpvotes] = useState({});
   const [localDownvotes, setLocalDownvotes] = useState({});
   const [userVotes, setUserVotes] = useState({});
@@ -271,6 +276,24 @@ export default function MatchSchedule({ bar, matches }) {
     const stored = localStorage.getItem(`match_votes_v3_${bar.id}`);
     if (stored) setUserVotes(JSON.parse(stored));
   }, [matches, bar.id]);
+
+  // Admin-Logik für Bestätigung
+  const handleAdminToggle = async (matchId, currentStatus) => {
+    setLoading(matchId);
+    try {
+      const result = await toggleMatchStatus(bar.id, matchId, !currentStatus);
+
+      if (result.success) {
+        router.refresh();
+      } else {
+        alert(result.error);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(null);
+    }
+  };
 
   const handleAction = async (matchId, actionType) => {
     if (loading === matchId) return;
@@ -353,11 +376,24 @@ export default function MatchSchedule({ bar, matches }) {
     <Container>
       <SectionHeader>
         <SectionTitle>📺 Programm-Vorschau</SectionTitle>
-        <SubText>Diese Spiele sind laut Profil geplant.</SubText>
+        <SubText>
+          {isAdmin
+            ? "Du verwaltest dieses Programm. Bestätigte Spiele erhalten das Inhaber-Siegel."
+            : "Diese Spiele werden voraussichtlich gezeigt. Achte auf das ✅ Siegel für Bestätigungen."}
+        </SubText>
       </SectionHeader>
+
+      {(!matches || matches.length === 0) && (
+        <SubText
+          style={{ marginTop: "20px", color: "#94a3b8", fontStyle: "italic" }}
+        >
+          Keine Spiele in der Vorschau.
+        </SubText>
+      )}
 
       {sortedDates.map((dateKey) => {
         const dayMatches = groupedMatches[dateKey];
+
         dayMatches.sort((a, b) => {
           const isHomeA =
             bar.home_team &&
@@ -367,8 +403,26 @@ export default function MatchSchedule({ bar, matches }) {
             bar.home_team &&
             (isSameTeam(bar.home_team, b.home_team) ||
               isSameTeam(bar.home_team, b.away_team));
+
+          const isOwnerA = a.is_confirmed_by_owner;
+          const isOwnerB = b.is_confirmed_by_owner;
+
+          const upA = localUpvotes[a.id] || 0;
+          const upB = localUpvotes[b.id] || 0;
+
+          // SORTIER-HIERARCHIE:
+          // 1. Stammteam
           if (isHomeA && !isHomeB) return -1;
           if (!isHomeA && isHomeB) return 1;
+
+          // 2. Inhaber-bestätigt (NEU)
+          if (isOwnerA && !isOwnerB) return -1;
+          if (!isOwnerA && isOwnerB) return 1;
+
+          // 3. User-bestätigt
+          if (upA > upB) return -1;
+          if (upA < upB) return 1;
+
           return a.fixed_start_time - b.fixed_start_time;
         });
 
@@ -383,6 +437,7 @@ export default function MatchSchedule({ bar, matches }) {
                   bar.home_team &&
                   (isSameTeam(bar.home_team, match.home_team) ||
                     isSameTeam(bar.home_team, match.away_team));
+                const isOwnerConfirmed = match.is_confirmed_by_owner;
                 const upvotes = localUpvotes[match.id] || 0;
                 const downvotes = localDownvotes[match.id] || 0;
                 const myVote = userVotes[match.id];
@@ -391,7 +446,11 @@ export default function MatchSchedule({ bar, matches }) {
                 let badgeType = "neutral";
                 let badgeText = "📅 GEPLANT";
 
-                if (isHomeMatch) {
+                if (isOwnerConfirmed) {
+                  cardStatus = "owner";
+                  badgeType = "owner";
+                  badgeText = "💎 INHABER-BESTÄTIGT";
+                } else if (isHomeMatch) {
                   cardStatus = "home";
                   badgeType = "home";
                   badgeText = "🏠 STAMMTEAM";
@@ -420,27 +479,39 @@ export default function MatchSchedule({ bar, matches }) {
                       {match.away_team}
                     </Teams>
 
-                    {/* Dezente Infotexte statt Boxen */}
-                    {upvotes > 0 && myVote !== "up" && !isHomeMatch && (
-                      <InfoText>
-                        👍 {upvotes}{" "}
-                        {upvotes === 1 ? "Bestätigung" : "Bestätigungen"}
-                      </InfoText>
-                    )}
+                    {!isOwnerConfirmed &&
+                      upvotes > 0 &&
+                      myVote !== "up" &&
+                      !isHomeMatch && (
+                        <InfoText>
+                          👍 {upvotes}{" "}
+                          {upvotes === 1 ? "Bestätigung" : "Bestätigungen"}
+                        </InfoText>
+                      )}
                     {downvotes > 0 && myVote !== "down" && (
                       <InfoText $isWarning>
-                        ℹ️ {downvotes}{" "}
-                        {downvotes === 1
-                          ? "Zweifel gemeldet"
-                          : "Zweifel gemeldet"}
+                        ℹ️ {downvotes} Zweifel gemeldet
                       </InfoText>
                     )}
 
                     <VoteArea>
-                      {myVote === "down" ? (
+                      {isAdmin ? (
+                        <AdminActionButton
+                          $isConfirmed={isOwnerConfirmed}
+                          disabled={loading === match.id}
+                          onClick={() =>
+                            handleAdminToggle(match.id, isOwnerConfirmed)
+                          }
+                        >
+                          {loading === match.id
+                            ? "..."
+                            : isOwnerConfirmed
+                              ? "Bestätigung aufheben"
+                              : "✨ Offiziell bestätigen"}
+                        </AdminActionButton>
+                      ) : myVote === "down" ? (
                         <UserReportedBox>
-                          Meldung eingegangen.
-                          <br />
+                          Meldung eingegangen. <br />
                           <UndoLink
                             onClick={() => handleAction(match.id, "reset")}
                           >
@@ -449,7 +520,7 @@ export default function MatchSchedule({ bar, matches }) {
                         </UserReportedBox>
                       ) : (
                         <>
-                          {!isHomeMatch && (
+                          {!isHomeMatch && !isOwnerConfirmed && (
                             <ConfirmButton
                               onClick={() => handleAction(match.id, "up")}
                               $hasVoted={myVote === "up"}

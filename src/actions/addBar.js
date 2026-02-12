@@ -15,12 +15,11 @@ export async function addBar(formData) {
   const city = formData.get("city");
   const home_team = formData.get("home_team") || null;
 
-  // --- NEUE FELDER ---
   const opening_hours = formData.get("opening_hours");
   const website = formData.get("website");
   const phone_number = formData.get("phone");
 
-  // --- 1. GEOCODING (OpenStreetMap) ---
+  // --- 1. GEOCODING (User-Agent auf neuen Namen angepasst) ---
   const addressQuery = `${street}, ${zip} ${city}`;
   let lat = null;
   let lng = null;
@@ -28,7 +27,11 @@ export async function addBar(formData) {
   try {
     const geoRes = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}&limit=1`,
-      { headers: { "User-Agent": "Fussballschauen-App" } },
+      {
+        headers: {
+          "User-Agent": "Wolaeuftfussball-App-Crawler", // Aktualisiert!
+        },
+      },
     );
     const geoData = await geoRes.json();
     if (geoData && geoData.length > 0) {
@@ -39,11 +42,12 @@ export async function addBar(formData) {
     console.error("Geocoding Fehler:", e);
   }
 
-  // --- 2. LOGIK: WETTBEWERBE ---
+  // --- 2. LOGIK: WETTBEWERBE & FEATURES ---
   const selectedCompetitions = COMPETITIONS.filter(
     (comp) => formData.get(comp.id) === "on",
   ).map((comp) => comp.id);
 
+  // Intelligente Feature-Zuweisung
   const impliesSky = selectedCompetitions.some((id) =>
     ["bundesliga", "bundesliga2", "dfb_pokal"].includes(id),
   );
@@ -56,16 +60,17 @@ export async function addBar(formData) {
       formData.get("free_tv_general") === "on",
   );
 
-  // --- 3. SLUG ---
+  // --- 3. SLUG GENERIERUNG (Optimiert für SEO) ---
+  // Wir stellen sicher, dass Sonderzeichen sauber entfernt werden
   const slug = `${name}-${city}`
     .toLowerCase()
     .replace(/ä/g, "ae")
     .replace(/ö/g, "oe")
     .replace(/ü/g, "ue")
     .replace(/ß/g, "ss")
-    .replace(/[^a-z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/[^a-z0-9]/g, "-") // Alles was kein Buchstabe oder Zahl ist -> Bindestrich
+    .replace(/-+/g, "-") // Doppelte Bindestriche vermeiden
+    .replace(/^-|-$/g, ""); // Bindestriche am Anfang/Ende weg
 
   // --- 4. SPEICHERN ---
   const { data, error } = await supabase
@@ -82,7 +87,7 @@ export async function addBar(formData) {
         home_team,
         opening_hours,
         contact_info: { phone: phone_number, website: website },
-
+        google_meta: null,
         shown_competitions: selectedCompetitions,
         features: {
           sky: impliesSky,
@@ -91,12 +96,14 @@ export async function addBar(formData) {
         },
         status: "active",
         verification_score: 1,
+        is_claimed: false, // Standardmäßig nicht verifiziert
       },
     ])
     .select();
 
   if (error) {
-    return { success: false, message: error.message };
+    console.error("DB Error:", error.message);
+    return { success: false, message: "Fehler beim Speichern der Bar." };
   }
 
   return { success: true, slug: data[0].slug };

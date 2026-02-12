@@ -23,41 +23,29 @@ export const revalidate = 0; // Wichtig: Sorgt dafür, dass Votes sofort sichtba
 
 // --- DYNAMISCHE METADATEN ---
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
+  const { slug } = params;
 
+  // Hier die Bar aus Supabase holen
   const { data: bar } = await supabase
     .from("bars")
     .select("name, city, home_team")
     .eq("slug", slug)
     .single();
 
-  if (!bar) {
-    return { title: "Bar nicht gefunden" };
-  }
+  if (!bar) return { title: "Bar nicht gefunden" };
 
-  const title = `${bar.name} in ${bar.city} | Fußballschauen.de`;
-  const description = `Live Fußball schauen im ${bar.name}${
-    bar.home_team ? ` (Heimteam: ${bar.home_team})` : ""
-  }. Adresse, Wettbewerbe und Infos auf Fussballschauen.de.`;
+  const title = `${bar.name} in ${bar.city} | Fußball live schauen`;
+  const description = `Fußball live im ${bar.name} in ${bar.city}. ${
+    bar.home_team ? `Offizielle Kneipe von ${bar.home_team}.` : ""
+  } Alle Spiele, Wettbewerbe und Infos auf wolaeuftfussball.de.`;
 
   return {
-    title: title,
-    description: description,
+    title,
+    description,
     openGraph: {
-      title: title,
-      description: description,
-      url: `https://fussballschauen.de/bar/${slug}`, // Ersetze dies später durch deine echte Domain
-      siteName: "Fussballschauen.de",
-      locale: "de_DE",
-      type: "website",
-      images: [
-        {
-          url: "https://fussballschauen.de/og-image.jpg",
-          width: 1200,
-          height: 630,
-          alt: `Fußball gucken im ${bar.name}`,
-        },
-      ],
+      title,
+      description,
+      images: [`/api/og?title=${encodeURIComponent(bar.name)}`], // Optional: Dynamische Bilder
     },
   };
 }
@@ -83,23 +71,18 @@ export default async function BarPage({ params, searchParams }) {
     );
   }
 
-  // --- NEU: DIE SMARTE SPIEL-ABFRAGE STARTET HIER ---
   let upcomingMatches = [];
 
-  // 1. Welche Ligen hat die Bar (Votes > 0)?
   const verifiedLeagues = Object.entries(bar.competition_votes || {})
     .filter(([_, votes]) => votes > 0)
     .map(([leagueId]) => LEAGUE_MAPPING[leagueId] || leagueId);
 
-  // 2. Spiele aus der Datenbank ziehen (nur wenn Team oder Liga vorhanden)
   if (bar.home_team || verifiedLeagues.length > 0) {
     const orConditions = [];
-
     if (bar.home_team) {
       orConditions.push(`home_team.eq."${bar.home_team}"`);
       orConditions.push(`away_team.eq."${bar.home_team}"`);
     }
-
     if (verifiedLeagues.length > 0) {
       const leagueString = verifiedLeagues.map((l) => `"${l}"`).join(",");
       orConditions.push(`league.in.(${leagueString})`);
@@ -108,21 +91,20 @@ export default async function BarPage({ params, searchParams }) {
     const { data: matches } = await supabase
       .from("matches")
       .select("*")
-      .gte("start_time", new Date().toISOString()) // Nur Spiele ab "jetzt"
+      .gte("start_time", new Date().toISOString())
       .or(orConditions.join(","))
-      .order("start_time", { ascending: true })
-      .limit(8);
+      .order("start_time", { ascending: true });
 
     upcomingMatches = matches || [];
   }
 
-  // 3. Community Votes aus "bar_matches" dazuladen
+  // --- HIER WAR DER FEHLER: Wir laden jetzt is_confirmed_by_owner mit ---
   if (upcomingMatches.length > 0) {
     const matchIds = upcomingMatches.map((m) => m.id);
 
     const { data: votesData } = await supabase
       .from("bar_matches")
-      .select("match_id, upvotes, downvotes")
+      .select("match_id, upvotes, downvotes, is_confirmed_by_owner") // <--- Hinzugefügt!
       .eq("bar_id", bar.id)
       .in("match_id", matchIds);
 
@@ -133,17 +115,13 @@ export default async function BarPage({ params, searchParams }) {
           ...match,
           bar_upvotes: vote ? vote.upvotes : 0,
           bar_downvotes: vote ? vote.downvotes : 0,
+          is_confirmed_by_owner: vote ? vote.is_confirmed_by_owner : false, // <--- Hinzugefügt!
         };
       });
     }
   }
 
-  // Bar-Objekt um die gefilterten Matches erweitern
-  const barWithMatches = {
-    ...bar,
-    upcomingMatches,
-  };
-  // --- ENDE DER SMARTEN ABFRAGE ---
+  const barWithMatches = { ...bar, upcomingMatches };
 
   return (
     <>

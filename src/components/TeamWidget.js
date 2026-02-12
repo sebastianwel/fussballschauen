@@ -5,244 +5,239 @@ import styled from "styled-components";
 import TeamSelector from "@/components/TeamSelector";
 import { updateHomeTeam } from "@/actions/updateHomeTeam";
 
-// --- STYLES (Dein bestehendes Design) ---
+// --- STYLES ---
 const WidgetCard = styled.div`
-  background: linear-gradient(135deg, #ffffff 0%, #f4f6f8 100%);
-  border: 1px solid #e1e4e8;
+  background: ${(props) =>
+    props.$isAdmin
+      ? "#fff"
+      : "linear-gradient(135deg, #ffffff 0%, #f4f6f8 100%)"};
+  border: ${(props) =>
+    props.$isAdmin ? "2px solid #0070f3" : "1px solid #e1e4e8"};
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 1rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  position: relative;
-  overflow: hidden;
 `;
 
 const TeamName = styled.h3`
-  font-size: 1.5rem;
-  color: #1a1a1a;
+  font-size: 1.6rem;
+  color: #0f172a;
   margin: 0.5rem 0;
   font-weight: 800;
-`;
-
-const Label = styled.div`
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  color: #64748b;
-  font-weight: 700;
-  margin-bottom: 10px;
-`;
-
-const SaveButton = styled.button`
-  background: #0070f3;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-  width: 100%;
-  &:hover {
-    background: #005bb5;
-  }
-  &:disabled {
-    background: #ccc;
-    cursor: default;
-  }
-`;
-
-const AddButton = styled.button`
-  background: white;
-  border: 2px dashed #cbd5e1;
-  color: #64748b;
-  padding: 15px;
-  border-radius: 12px;
-  cursor: pointer;
-  width: 100%;
-  font-weight: 600;
-  &:hover {
-    border-color: #0070f3;
-    color: #0070f3;
-    background: #f0f9ff;
-  }
 `;
 
 const StatusBadge = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: ${(props) => (props.$verified ? "#dcfce7" : "#fffbeb")};
-  color: ${(props) => (props.$verified ? "#166534" : "#b45309")};
-  border: 1px solid ${(props) => (props.$verified ? "#86efac" : "#fcd34d")};
-  margin-top: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: ${(props) => {
+    if (props.$type === "owner") return "#eff6ff"; // Blau für Inhaber
+    if (props.$type === "verified") return "#dcfce7"; // Grün für Fans verifiziert
+    return "#fffbeb"; // Gelb für unbestätigt
+  }};
+  color: ${(props) => {
+    if (props.$type === "owner") return "#1d4ed8";
+    if (props.$type === "verified") return "#166534";
+    return "#b45309";
+  }};
+  border: 1px solid
+    ${(props) => {
+      if (props.$type === "owner") return "#bfdbfe";
+      if (props.$type === "verified") return "#86efac";
+      return "#fcd34d";
+    }};
 `;
 
-const ConfirmButton = styled.button`
-  background: #fff;
-  border: 1px solid #22c55e;
-  color: #22c55e;
+const AdminActionBtn = styled.button`
+  background: ${(props) => (props.$secondary ? "transparent" : "#0070f3")};
+  color: ${(props) => (props.$secondary ? "#64748b" : "white")};
+  border: ${(props) => (props.$secondary ? "1px solid #cbd5e1" : "none")};
   padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.9rem;
+  border-radius: 8px;
   font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
-  margin-top: 10px;
-  transition: all 0.2s;
-
+  margin-top: 15px;
   &:hover {
-    background: #f0fdf4;
-  }
-
-  &:disabled {
-    border-color: #e2e8f0;
-    color: #94a3b8;
-    background: #f8fafc;
-    cursor: default;
+    opacity: 0.9;
   }
 `;
 
-export default function TeamWidget({ bar }) {
+const SectionTitle = styled.h2`
+  font-size: 1.3rem;
+  margin: 0;
+  color: #1a1a1a;
+`;
+
+// --- KOMPONENTE ---
+
+export default function TeamWidget({ bar, isAdmin }) {
   const [team, setTeam] = useState(bar.home_team);
   const [votes, setVotes] = useState(bar.home_team_votes || 0);
-
   const [isEditing, setIsEditing] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
 
-  // Check LocalStorage beim Laden
   useEffect(() => {
     const voted = localStorage.getItem(`team_vote_${bar.id}`);
     if (voted) setHasVoted(true);
   }, [bar.id]);
 
-  // Funktion 1: Neues Team speichern
-  const handleSaveNew = async () => {
-    if (!newTeamName) return;
+  // Funktion für Inhaber & Fans
+  const handleSave = async (selectedTeam) => {
     setLoading(true);
-
     // Optimistic UI
-    setTeam(newTeamName);
-    setVotes(1);
+    setTeam(selectedTeam);
     setIsEditing(false);
-    setHasVoted(true);
-    localStorage.setItem(`team_vote_${bar.id}`, "true");
 
-    await updateHomeTeam(bar.id, newTeamName, true); // true = Neuer Eintrag
+    // Server Action
+    // Falls isAdmin true ist, könnte man in der Action die Votes direkt auf 100 setzen
+    // oder ein Flag 'owner_confirmed' nutzen. Hier setzen wir das Team.
+    await updateHomeTeam(bar.id, selectedTeam, true);
     setLoading(false);
   };
 
-  // Funktion 2: Bestehendes Team bestätigen
   const handleConfirm = async () => {
-    if (hasVoted) return;
+    if (hasVoted || isAdmin) return;
     setLoading(true);
-
-    // Optimistic UI
     setVotes((prev) => prev + 1);
     setHasVoted(true);
     localStorage.setItem(`team_vote_${bar.id}`, "true");
-
-    await updateHomeTeam(bar.id, null, false); // false = Nur Vote hochzählen
+    await updateHomeTeam(bar.id, null, false);
     setLoading(false);
   };
 
-  // Status-Logik: Ab 3 Stimmen gilt es als "Verifiziert"
-  const isVerified = votes >= 3;
+  // --- RENDERING ---
 
-  // --- ZUSTAND 1: Team ist bekannt ---
-  if (team) {
-    return (
-      <WidgetCard>
-        <Label>Haus-Team</Label>
-
-        {/* Team Name */}
-        <TeamName>{team}</TeamName>
-
-        {/* Status Badge */}
-        <StatusBadge $verified={isVerified}>
-          {isVerified ? "✅ Verifiziert" : "⚠️ Unbestätigt"}
-          <span>
-            • {votes} {votes === 1 ? "Stimme" : "Stimmen"}
-          </span>
-        </StatusBadge>
-
-        {/* Voting Bereich */}
-        <div style={{ marginTop: "15px" }}>
-          {!hasVoted ? (
-            <ConfirmButton onClick={handleConfirm} disabled={loading}>
-              👍 Stimmt, hier sind {team} Fans!
-            </ConfirmButton>
-          ) : (
-            <div
-              style={{
-                color: "#166534",
-                fontSize: "0.9rem",
-                marginTop: "10px",
-                fontWeight: "500",
-              }}
-            >
-              Danke für deine Bestätigung!
-            </div>
-          )}
-        </div>
-      </WidgetCard>
-    );
-  }
-
-  // --- ZUSTAND 2: Eingabe-Modus ---
+  // 1. EDIT-MODUS (Inhaber oder Fan will hinzufügen)
   if (isEditing) {
     return (
-      <WidgetCard>
-        <Label>Welches Team regiert hier?</Label>
-
-        <div style={{ textAlign: "left", marginTop: "10px" }}>
-          {/* Hier nutzen wir deine neue Autocomplete Komponente */}
+      <Section>
+        <SectionTitle>🏟️ Stamm-Mannschaft festlegen</SectionTitle>
+        <WidgetCard $isAdmin={isAdmin}>
           <TeamSelector
             value={newTeamName}
             onChange={(val) => setNewTeamName(val)}
           />
-        </div>
-
-        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-          <button
-            onClick={() => setIsEditing(false)}
-            style={{
-              background: "transparent",
-              border: "1px solid #ddd",
-              padding: "10px",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
-            Abbrechen
-          </button>
-          <SaveButton
-            onClick={handleSaveNew}
-            disabled={loading || !newTeamName}
-          >
-            {loading ? "..." : "Speichern"}
-          </SaveButton>
-        </div>
-      </WidgetCard>
+          <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+            <AdminActionBtn $secondary onClick={() => setIsEditing(false)}>
+              Abbrechen
+            </AdminActionBtn>
+            <AdminActionBtn
+              onClick={() => handleSave(newTeamName)}
+              disabled={!newTeamName || loading}
+            >
+              {loading ? "Wird gespeichert..." : "Team festlegen"}
+            </AdminActionBtn>
+          </div>
+        </WidgetCard>
+      </Section>
     );
   }
 
-  // --- ZUSTAND 3: Leer (Hinzufügen) ---
+  // 2. VIEW-MODUS (Team bereits vorhanden)
+  if (team) {
+    const isOwnerVerified = bar.is_claimed; // Wenn die Bar geclaimt ist, wiegt das Team schwerer
+    const isFanVerified = votes >= 3;
+
+    return (
+      <section style={{ marginTop: "2rem" }}>
+        <SectionTitle>🏟️ Stamm-Mannschaft</SectionTitle>
+        <WidgetCard $isAdmin={isAdmin}>
+          <TeamName>{team}</TeamName>
+
+          <StatusBadge
+            $type={
+              isOwnerVerified
+                ? "owner"
+                : isFanVerified
+                  ? "verified"
+                  : "unconfirmed"
+            }
+          >
+            {isOwnerVerified
+              ? "💎 Inhaber-bestätigt"
+              : isFanVerified
+                ? "✅ Fan-verifiziert"
+                : "⚠️ Unbestätigt"}
+            {!isOwnerVerified && (
+              <span>
+                {" "}
+                • {votes} {votes === 1 ? "Stimme" : "Stimmen"}
+              </span>
+            )}
+          </StatusBadge>
+
+          <div style={{ marginTop: "15px" }}>
+            {isAdmin ? (
+              <AdminActionBtn
+                $secondary
+                onClick={() => {
+                  setIsEditing(true);
+                  setNewTeamName(team);
+                }}
+              >
+                ✏️ Team ändern
+              </AdminActionBtn>
+            ) : (
+              !isOwnerVerified &&
+              (!hasVoted ? (
+                <button
+                  onClick={handleConfirm}
+                  style={{
+                    background: "white",
+                    border: "1px solid #22c55e",
+                    color: "#22c55e",
+                    padding: "8px 20px",
+                    borderRadius: "20px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  👍 Stimmt!
+                </button>
+              ) : (
+                <span
+                  style={{
+                    color: "#166534",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Danke für deine Stimme!
+                </span>
+              ))
+            )}
+          </div>
+        </WidgetCard>
+      </section>
+    );
+  }
+
+  // 3. INITIAL-MODUS (Kein Team da)
   return (
-    <WidgetCard>
-      <Label>Heim-Mannschaft</Label>
-      <p style={{ fontSize: "0.9rem", color: "#666", marginBottom: "15px" }}>
-        Weißt du, welches Fan-Lager sich hier trifft?
-      </p>
-      <AddButton onClick={() => setIsEditing(true)}>
-        + Team hinzufügen
-      </AddButton>
-    </WidgetCard>
+    <section style={{ marginTop: "2rem" }}>
+      <SectionTitle>🏟️ Stamm-Mannschaft</SectionTitle>
+      <WidgetCard $isAdmin={isAdmin}>
+        <p style={{ color: "#64748b", marginBottom: "15px" }}>
+          Bisher wurde kein Stammteam für diese Bar gemeldet.
+        </p>
+        <AdminActionBtn onClick={() => setIsEditing(true)}>
+          {isAdmin ? "+ Team festlegen" : "+ Team vorschlagen"}
+        </AdminActionBtn>
+      </WidgetCard>
+    </section>
   );
 }
+
+// Kleiner Hilfs-Style für die Abstände
+const Section = styled.section`
+  margin-top: 2rem;
+`;

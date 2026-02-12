@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import BarList from "@/components/BarList";
-import MapWrapper from "@/components/MapWrapper";
 import SearchBar from "@/components/SearchBar";
 import Link from "next/link";
 import HomeMapSection from "@/components/HomeMapSection";
@@ -17,28 +16,70 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 );
 
-export const revalidate = 0; // Immer frisch laden
+export const metadata = {
+  title: {
+    default: "Wo läuft Fußball? | Finde Fußballkneipen in deiner Nähe",
+    template: "%s | wolaeuftfussball.de",
+  },
+  description:
+    "Finde die besten Sportbars und Fußballkneipen in deiner Stadt. Live-Übertragungen, Fan-Infos und Bestätigungen von Wirten.",
+  keywords: [
+    "Fußballkneipe",
+    "Sportbar",
+    "Fußball gucken",
+    "Live Fußball",
+    "Bundesliga Kneipe",
+  ],
+  metadataBase: new URL("https://wolaeuftfussball.de"),
+  openGraph: {
+    type: "website",
+    locale: "de_DE",
+    url: "https://wolaeuftfussball.de",
+    siteName: "Wo läuft Fußball?",
+  },
+};
+
+export const revalidate = 0;
 
 export default async function Home() {
-  // Wir laden für die Home-Page die Bars (ohne Filter)
+  // --- DIE ROBUSTE ABFRAGE ---
   const { data: bars, error } = await supabase
     .from("bars")
     .select(
-      "id, name, city, zip_code, slug, features, google_meta, lat, lng, home_team",
-      "verification_score",
+      "id, name, city, zip_code, slug, features, google_meta, lat, lng, home_team, verification_score, is_claimed",
     )
-    .or("google_meta.is.null,google_meta->>status.eq.OPERATIONAL")
+    // Logik: Zeige Bar wenn...
+    // 1. google_meta ist NULL
+    // 2. ODER status ist 'OPERATIONAL'
+    // 3. ODER status existiert gar nicht (Filter auf .is.null fängt {} ab)
+    .or(
+      "google_meta.is.null,google_meta->>status.eq.OPERATIONAL,google_meta->>status.is.null",
+    )
     .order("verification_score", { ascending: false });
 
-  const barsWithGeo = bars?.filter((b) => b.lat && b.lng) || [];
+  if (error) {
+    console.error("Supabase Error:", error);
+  }
 
-  const popularBars = bars?.slice(0, 50);
+  // --- RANKING BOOST ---
+  // Wir sortieren im Server-Code, damit Claims IMMER oben stehen
+  const sortedBars = bars
+    ? [...bars].sort((a, b) => {
+        if (a.is_claimed && !b.is_claimed) return -1;
+        if (!a.is_claimed && b.is_claimed) return 1;
+        return (b.verification_score || 0) - (a.verification_score || 0);
+      })
+    : [];
+
+  const barsWithGeo = sortedBars.filter((b) => b.lat && b.lng);
+  const popularBars = sortedBars.slice(0, 50);
+
   return (
     <main style={{ background: "#f8f9fa", minHeight: "100vh" }}>
-      {/* --- 1. HERO SECTION (Der Hingucker) --- */}
+      {/* --- HERO SECTION --- */}
       <div
         style={{
-          background: "linear-gradient(135deg, #1e1e2f 0%, #16213e 100%)", // Dunkler, moderner Look
+          background: "linear-gradient(135deg, #1e1e2f 0%, #16213e 100%)",
           padding: "80px 20px 100px 20px",
           textAlign: "center",
           color: "white",
@@ -53,18 +94,17 @@ export default async function Home() {
           Finde die besten Fußballkneipen in deiner Nähe.
         </p>
 
-        {/* Die SearchBar (leitet jetzt auf /search weiter) */}
         <div style={{ maxWidth: "600px", margin: "0 auto" }}>
           <SearchBar />
           <HomeQuickFilters />
         </div>
       </div>
 
-      {/* --- 2. PREVIEW KARTE --- */}
+      {/* --- PREVIEW KARTE --- */}
       <div
         style={{
           maxWidth: "1200px",
-          margin: "-60px auto 40px auto", // Zieht die Karte in den Hero-Bereich rein
+          margin: "-60px auto 40px auto",
           padding: "0 20px",
         }}
       >
@@ -75,14 +115,12 @@ export default async function Home() {
             overflow: "hidden",
             boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
             border: "4px solid white",
+            background: "white",
           }}
         >
-          {/* Hier eine "kleine" Karte zur Übersicht */}
           <HomeMapSection barsWithGeo={barsWithGeo} />
         </div>
       </div>
-
-      {/* --- 4. How it works --- */}
 
       <CommunitySteps />
       <CommunityMission />
@@ -90,7 +128,7 @@ export default async function Home() {
       <PopularCities />
       <LeagueGrid />
 
-      {/* --- 3. BELIEBTE BARS LISTE --- */}
+      {/* --- BELIEBTE BARS LISTE --- */}
       <div
         style={{
           maxWidth: "1200px",
@@ -121,7 +159,7 @@ export default async function Home() {
           </Link>
         </div>
 
-        <BarList bars={popularBars || []} />
+        <BarList bars={popularBars} />
         <HomeFAQ />
       </div>
     </main>

@@ -26,6 +26,8 @@ const FooterColumn = styled.div`
     font-weight: 700;
     margin-bottom: 20px;
     color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   ul {
@@ -62,16 +64,41 @@ export function Footer() {
   return (
     <FooterContainer>
       <FooterGrid>
+        {/* BRAND & MISSION */}
         <FooterColumn>
-          <h4>FUSSBALLSCHAUEN</h4>
+          <h4>WOLAEUFTFUSSBALL.DE</h4>
           <p
             style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: "1.6" }}
           >
-            Die Community-Plattform für Fußballfans. Finde deine Kneipe,
-            verifiziere das Programm und genieße den Anstoß.
+            Dein Guide für Fußball live in der Kneipe. Finde die besten
+            Sportbars in deiner Stadt, verifiziere das Programm und verpasse
+            keinen Anstoß mehr.
           </p>
         </FooterColumn>
 
+        {/* SEO CITY LINKS */}
+        <FooterColumn>
+          <h4>Beliebte Städte</h4>
+          <ul>
+            <li>
+              <Link href="/in/hamburg">Hamburg</Link>
+            </li>
+            <li>
+              <Link href="/in/berlin">Berlin</Link>
+            </li>
+            <li>
+              <Link href="/in/muenchen">München</Link>
+            </li>
+            <li>
+              <Link href="/in/koeln">Köln</Link>
+            </li>
+            <li>
+              <Link href="/search">Alle Städte anzeigen</Link>
+            </li>
+          </ul>
+        </FooterColumn>
+
+        {/* COMPETITIONS */}
         <FooterColumn>
           <h4>Wettbewerbe</h4>
           <ul>
@@ -86,21 +113,29 @@ export function Footer() {
             <li>
               <Link href="/search?filter=dfb_pokal">DFB Pokal</Link>
             </li>
+            <li>
+              <Link href="/search?filter=premier_league">Premier League</Link>
+            </li>
           </ul>
         </FooterColumn>
 
+        {/* OWNER AREA */}
         <FooterColumn>
-          <h4>Für Bar-Besitzer</h4>
+          <h4>Für Gastronomen</h4>
           <ul>
             <li>
               <Link href="/add">Bar kostenlos eintragen</Link>
             </li>
             <li>
-              <Link href="/owner-info">Vorteile für Betreiber</Link>
+              <Link href="/owner-setup">Vorteile für Wirte</Link>
+            </li>
+            <li>
+              <Link href="/login">Inhaber Login</Link>
             </li>
           </ul>
         </FooterColumn>
 
+        {/* LEGAL */}
         <FooterColumn>
           <h4>Rechtliches</h4>
           <ul>
@@ -115,7 +150,7 @@ export function Footer() {
       </FooterGrid>
 
       <Copyright>
-        © {new Date().getFullYear()} Fussballschauen.de. Made with ⚽️ for Fans.
+        © {new Date().getFullYear()} wolaeuftfussball.de. Made with ⚽️ for Fans.
       </Copyright>
     </FooterContainer>
   );
