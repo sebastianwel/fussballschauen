@@ -48,7 +48,7 @@ const ListPanel = styled.div`
 const MapPanel = styled.div`
   flex: 1;
   position: relative;
-  height: 100%;
+  height: 90%;
   width: 100%;
   z-index: 10;
 `;
@@ -93,7 +93,7 @@ const ToggleButton = styled.button`
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: ${(props) => (props.$isMapOpen ? "auto" : "30px")};
+  bottom: ${(props) => (props.$isMapOpen ? "auto" : "100px")};
   top: ${(props) =>
     props.$isMapOpen ? "max(15px, env(safe-area-inset-top, 15px))" : "auto"};
   background: #1a1a1a;

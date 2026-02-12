@@ -2,45 +2,44 @@
 import styled from "styled-components";
 
 const Section = styled.section`
-  padding: 100px 20px;
+  padding: 80px 20px;
   background-color: white;
   display: flex;
   justify-content: center;
 `;
 
 const Container = styled.div`
-  max-width: 850px;
+  max-width: 800px;
   text-align: center;
 `;
 
 const Tag = styled.span`
-  background: #eff6ff;
-  color: #0070f3;
+  background: #f1f5f9;
+  color: #64748b;
   padding: 6px 14px;
-  border-radius: 50px;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
 `;
 
 const Title = styled.h2`
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 900;
   color: #0f172a;
-  margin: 24px 0;
-  line-height: 1.1;
+  margin: 20px 0;
+  line-height: 1.2;
 
   @media (max-width: 768px) {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 `;
 
 const Description = styled.p`
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   color: #475569;
-  line-height: 1.8;
-  margin-bottom: 40px;
+  line-height: 1.7;
+  margin-bottom: 30px;
 
   strong {
     color: #0f172a;
@@ -48,35 +47,29 @@ const Description = styled.p`
   }
 
   .highlight {
-    background: linear-gradient(
-      120deg,
-      rgba(0, 112, 243, 0.1) 0%,
-      rgba(0, 112, 243, 0.1) 100%
-    );
-    padding: 0 4px;
-    border-radius: 4px;
     color: #0070f3;
     font-weight: 600;
   }
 `;
 
 const QuoteBox = styled.div`
-  border-left: 4px solid #e2e8f0;
-  padding-left: 24px;
+  border-left: 3px solid #0070f3;
+  padding: 10px 0 10px 20px;
   text-align: left;
-  margin-top: 50px;
+  margin: 40px auto 0 auto;
+  max-width: 600px;
 
   p {
     font-style: italic;
-    font-size: 1.1rem;
-    color: #64748b;
-    margin-bottom: 8px;
+    font-size: 1.05rem;
+    color: #334155;
+    margin-bottom: 4px;
   }
 
   span {
-    font-weight: 700;
-    color: #1e293b;
-    font-size: 0.9rem;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 500;
   }
 `;
 
@@ -84,29 +77,29 @@ export function CommunityMission() {
   return (
     <Section id="mission">
       <Container>
-        <Tag>Unsere Mission</Tag>
-        <Title>Schluss mit dem Rätselraten vor der Kneipentür.</Title>
+        <Tag>Warum das Ganze?</Tag>
+        <Title>
+          Ehrlich gesagt: Wir hatten einfach selbst keine Lust mehr.
+        </Title>
         <Description>
-          Wir kennen das alle: Man verabredet sich mit Freunden, fährt quer
-          durch die Stadt, bestellt das erste Kaltgetränk – und dann läuft auf
-          dem Fernseher <strong>Darts statt Derby</strong>. Oder die Bar hat gar
-          keine Sky-Lizenz mehr.
+          Die Story ist immer die gleiche: Man verabredet sich, fährt quer durch
+          die Stadt, bestellt das erste Bier und merkt dann, dass auf der
+          Leinwand <strong>Darts statt Derby</strong> läuft. Oder die Kneipe hat
+          die Sky-Lizenz schon vor zwei Jahren abgegeben.
           <br />
           <br />
-          <span className="highlight">Fussballschauen.de</span> wurde gegründet,
-          um das zu ändern. Unsere Plattform ist keine statische Datenbank. Sie
-          lebt durch <strong>dich</strong>. Durch die Kombination aus
-          offiziellen Betreiber-Infos und dem{" "}
-          <span className="highlight">Live-Check der Community</span> wissen wir
-          immer ganz genau, wo der Ball rollt.
+          <span className="highlight">wolaeuftfussball.de</span> ist ein Projekt
+          von Fans für Fans. Wir werfen die Infos der Wirte mit dem{" "}
+          <strong>Live-Check aus der Community</strong> zusammen. So wissen wir
+          (fast) immer, wo wirklich angepfiffen wird.
         </Description>
 
         <QuoteBox>
           <p>
-            "Ich wollte eine Seite bauen, auf die ich mich verlassen kann, wenn
-            ich Samstag um 15:20 Uhr noch auf der Suche nach einem Platz bin."
+            "Ich wollte eine Seite, die funktioniert, wenn ich Samstag um 15:25
+            Uhr noch einen Platz vor einer Leinwand suche."
           </p>
-          <span>— Der Gründer von Fussballschauen.de</span>
+          <span>— Einer von uns</span>
         </QuoteBox>
       </Container>
     </Section>
