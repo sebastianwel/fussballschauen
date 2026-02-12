@@ -55,8 +55,8 @@ def run_sync():
     for league in LEAGUES:
         print(f"Lade {league['name']}...")
         
-        # Wir schauen 10 Tage in die Zukunft
-        for i in range(10):
+        # Wir schauen 14 Tage in die Zukunft
+        for i in range(14):
             target_date = (today + timedelta(days=i)).strftime('%Y-%m-%d')
             # API URL korrigiert (Events per League on Day)
             url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsday.php?d={target_date}&l={league['id']}"
