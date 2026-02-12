@@ -17,12 +17,12 @@ if not URL or not KEY or not API_KEY:
 supabase = create_client(URL, KEY)
 
 LEAGUES = [
-    {"name": "German Bundesliga", "id": "4331", "short": "BL1"}, # IDs sind oft Zahlen in der API
-    {"name": "German 2. Bundesliga", "id": "4332", "short": "BL2"},
-    {"name": "UEFA Champions League", "id": "4480", "short": "UCL"},
-    {"name": "UEFA Europa League", "id": "4481", "short": "UEL"},
-    {"name": "UEFA Conference League", "id": "4751", "short": "CONFL"},
-    {"name": "DFB-Pokal", "id": "4693", "short": "DFB"}
+    {"name": "German Bundesliga", "id": "GERMAN%20BUNDESLIGA", "short": "BL1"},
+    {"name": "German 2. Bundesliga", "id": "German%202.%20Bundesliga", "short": "BL2"},
+    {"name": "UEFA Champions League", "id": "UEFA%20Champions%20League", "short": "UCL"},
+    {"name": "UEFA Europa League", "id": "UEFA%20europa%20league", "short": "UEL"},
+    {"name": "UEFA Conference League", "id": "UEFA%20conference%20league", "short": "CONFL"},
+    {"name": "DFB-Pokal", "id": "DFB-Pokal", "short": "DFB"}
 ]
 
 def get_broadcaster(dt, league_short):
