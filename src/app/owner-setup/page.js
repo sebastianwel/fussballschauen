@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import OwnerSetupClient from "./OwnerSetupClient";
+import OwnerSetupClient from "@/components/OwnerSetupClient";
 
 export const metadata = {
   title: "Inhaber-Portal | wolaeuftfussball.de",
