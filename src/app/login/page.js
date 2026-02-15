@@ -27,6 +27,7 @@ const Input = styled.input`
   margin: 10px 0;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+  font-size: 16px;
 `;
 
 const Button = styled.button`
@@ -101,7 +102,7 @@ export default function LoginPage() {
           required
         />
         <Button type="submit" disabled={loading}>
-          {loading ? "Einstoppen..." : "Anmelden"}
+          {loading ? "Einloggen..." : "Anmelden"}
         </Button>
       </form>
     </Container>

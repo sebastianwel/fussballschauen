@@ -153,15 +153,23 @@ const MobileOverlay = styled.div`
 // Unified Mobile Link Style
 const MobileMenuLink = styled(Link)`
   text-decoration: none;
-  font-size: 1.1rem;
+  font-size: 1.05rem; /* Etwas kleiner für Mobile */
   font-weight: 700;
-  padding: 16px;
+  padding: 14px 10px; /* Weniger horizontales Padding */
   border-radius: 12px;
-  text-align: center;
+  display: flex; /* Flexbox für Icon + Text */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
+  box-sizing: border-box; /* Ganz wichtig: Padding zählt zur Breite */
   transition: all 0.2s;
 
-  /* Dynamische Farben basierend auf Props */
+  /* Verhindert Textumbruch-Chaos */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
   background: ${(props) =>
     props.$variant === "primary"
       ? "#0070f3"
@@ -174,13 +182,6 @@ const MobileMenuLink = styled(Link)`
       : props.$variant === "success"
         ? "#166534"
         : "#0f172a"};
-  border: 1px solid
-    ${(props) =>
-      props.$variant === "primary"
-        ? "#0070f3"
-        : props.$variant === "success"
-          ? "#dcfce7"
-          : "#e2e8f0"};
 `;
 
 const MobileLogoutBtn = styled.button`
@@ -211,36 +212,65 @@ export function Header() {
     }
   }, [isMenuOpen]);
 
+  const handleLogout = async () => {
+    try {
+      // 1. Supabase SignOut (löscht Session im LocalStorage/Cookie)
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // 2. Lokale UI-States sofort zurücksetzen
+      setUserBarSlug(null);
+      setIsMenuOpen(false);
+
+      // 3. Navigation und harter Refresh des Server-Caches
+      // Wir nutzen router.push und warten kurz, bevor wir refreshen
+      router.push("/");
+
+      // Refresh sorgt dafür, dass Server Components (Layouts)
+      // die Session neu prüfen und als "null" erkennen
+      router.refresh();
+    } catch (error) {
+      console.error("Logout Fehler:", error.message);
+      // Fallback: Wenn alles strickt, Seite hart neu laden
+      window.location.href = "/";
+    }
+  };
+
+  // Optimierter Auth-Listener
   useEffect(() => {
     async function checkUserSession() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
       if (session) {
         const { data: bar } = await supabase
           .from("bars")
           .select("slug")
           .eq("owner_id", session.user.id)
           .maybeSingle();
+
         if (bar) setUserBarSlug(bar.slug);
       } else {
         setUserBarSlug(null);
       }
     }
+
     checkUserSession();
+
+    // Der Listener reagiert auf SIGNED_IN und SIGNED_OUT Events
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => checkUserSession());
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setUserBarSlug(null);
+      } else if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        checkUserSession();
+      }
+    });
+
     return () => subscription.unsubscribe();
   }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUserBarSlug(null);
-    setIsMenuOpen(false);
-    router.push("/");
-    router.refresh();
-  };
 
   const closeMenu = () => setIsMenuOpen(false);
 
@@ -262,7 +292,7 @@ export function Header() {
             <>
               <PortalLink href="/owner-setup">Für Gastronomen</PortalLink>
               <NavLink href="/login">Login</NavLink>
-              <AddButton href="/add-bar">Bar hinzufügen</AddButton>
+              <AddButton href="/add">Bar hinzufügen</AddButton>
             </>
           )}
         </NavLinks>

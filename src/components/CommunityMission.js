@@ -21,6 +21,7 @@ const Tag = styled.span`
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 `;
 
 const Title = styled.h2`
@@ -52,24 +53,34 @@ const Description = styled.p`
   }
 `;
 
-const QuoteBox = styled.div`
-  border-left: 3px solid #0070f3;
-  padding: 10px 0 10px 20px;
+const FeatureGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 40px;
   text-align: left;
-  margin: 40px auto 0 auto;
-  max-width: 600px;
+`;
 
-  p {
-    font-style: italic;
-    font-size: 1.05rem;
-    color: #334155;
-    margin-bottom: 4px;
+const FeatureItem = styled.div`
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  span {
-    color: #94a3b8;
-    font-size: 0.85rem;
-    font-weight: 500;
+  p {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.5;
   }
 `;
 
@@ -77,30 +88,49 @@ export function CommunityMission() {
   return (
     <Section id="mission">
       <Container>
-        <Tag>Warum das Ganze?</Tag>
-        <Title>
-          Ehrlich gesagt: Wir hatten einfach selbst keine Lust mehr.
-        </Title>
+        <Tag>Das Konzept</Tag>
+        <Title>Alle Fußballkneipen auf einer Karte.</Title>
         <Description>
-          Die Story ist immer die gleiche: Man verabredet sich, fährt quer durch
-          die Stadt, bestellt das erste Bier und merkt dann, dass auf der
-          Leinwand <strong>Darts statt Derby</strong> läuft. Oder die Kneipe hat
-          die Sky-Lizenz schon vor zwei Jahren abgegeben.
-          <br />
-          <br />
-          <span className="highlight">wolaeuftfussball.de</span> ist ein Projekt
-          von Fans für Fans. Wir werfen die Infos der Wirte mit dem{" "}
-          <strong>Live-Check aus der Community</strong> zusammen. So wissen wir
-          (fast) immer, wo wirklich angepfiffen wird.
+          <span className="highlight">wolaeuftfussball.de</span> ist ein offenes
+          Verzeichnis für Sportbars in Deutschland. Wir bündeln Informationen zu
+          Übertragungsrechten, Hausmannschaften und Öffnungszeiten an einem Ort,
+          damit die Suche nach dem nächsten Anstoß nicht in Stress ausartet.
         </Description>
 
-        <QuoteBox>
-          <p>
-            "Ich wollte eine Seite, die funktioniert, wenn ich Samstag um 15:25
-            Uhr noch einen Platz vor einer Leinwand suche."
-          </p>
-          <span>— Einer von uns</span>
-        </QuoteBox>
+        <FeatureGrid>
+          <FeatureItem>
+            <h4>
+              <span>📍</span> Regionaler Fokus
+            </h4>
+            <p>
+              Finde Bars in deiner direkten Umgebung – egal ob in der Großstadt
+              oder im Umland.
+            </p>
+          </FeatureItem>
+          <FeatureItem>
+            <h4>
+              <span>🏆</span> Wettbewerbs-Check
+            </h4>
+            <p>
+              Wir zeigen dir genau, welche Bar die Bundesliga, Champions League
+              oder Regionalliga zeigt.
+            </p>
+          </FeatureItem>
+          <FeatureItem>
+            <h4>
+              <span>🛡️</span> Verifizierte Daten
+            </h4>
+            <p>
+              Durch unser Inhaber-Siegel und die Votes erkennst du sofort, wie
+              aktuell die Infos sind.
+            </p>
+          </FeatureItem>
+        </FeatureGrid>
+
+        <Description style={{ marginTop: "40px", fontSize: "1rem" }}>
+          Keine Anmeldung, keine Kosten, kein Tracking. Einfach nur Fußball in
+          der Kneipe.
+        </Description>
       </Container>
     </Section>
   );

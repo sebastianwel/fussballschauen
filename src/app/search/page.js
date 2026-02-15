@@ -32,7 +32,7 @@ export default async function SearchPage({ searchParams }) {
 
   let bars = [];
 
-  // --- SCHRITT 1: Geocoding (Nur wenn keine Koordinaten da sind) ---
+  // --- SCHRITT 1: Geocoding ---
   if (!lat && !lng && query) {
     try {
       const geoRes = await fetch(
@@ -48,18 +48,17 @@ export default async function SearchPage({ searchParams }) {
     }
   }
 
-  // --- SCHRITT 2: Supabase Abfrage aufbauen ---
+  // --- SCHRITT 2: Supabase Abfrage ---
   let supabaseQuery = supabase.from("bars").select("*");
-
-  // Grundfilter: Nur Bars, die operativ sind
   supabaseQuery = supabaseQuery.or(
     "google_meta.is.null,google_meta->>status.eq.OPERATIONAL",
   );
 
-  // TEXT-FILTER LOGIK:
-  // Wir filtern NUR nach Text, wenn es KEINE automatische User-Ortung ist.
-  // Denn bei 'u=true' ist der Query-Text nur die Adresse für die Anzeige.
-  if (query && !isUserLocation) {
+  // LOGIK-UPDATE:
+  // Nur nach Text filtern, wenn wir KEINE Koordinaten haben.
+  // Wenn wir lat/lng haben (z.B. von Buxtehude), wollen wir alle Bars laden,
+  // um im nächsten Schritt die am nächsten gelegenen zu berechnen.
+  if (query && !isUserLocation && !lat && !lng) {
     supabaseQuery = supabaseQuery.or(
       `name.ilike.%${query}%,city.ilike.%${query}%,zip_code.ilike.%${query}%`,
     );
@@ -70,7 +69,7 @@ export default async function SearchPage({ searchParams }) {
   if (data) {
     bars = data;
 
-    // --- SCHRITT 3: Sortierung & Distanz ---
+    // --- SCHRITT 3: Distanz-Sortierung ---
     if (lat && lng) {
       bars = bars
         .map((bar) => ({
@@ -80,14 +79,13 @@ export default async function SearchPage({ searchParams }) {
         }))
         .sort((a, b) => a.distance - b.distance);
     } else {
-      // Ohne Standort sortieren wir nach dem Verifizierungs-Score
       bars = bars.sort(
         (a, b) => (b.verification_score || 0) - (a.verification_score || 0),
       );
     }
 
-    // Performance-Sicherung
-    bars = bars.slice(0, 50);
+    // LIMIT ERHÖHT: Damit wir auch Bars in der weiteren Umgebung finden
+    bars = bars.slice(0, 200);
   }
 
   return (
