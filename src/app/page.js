@@ -48,10 +48,6 @@ export default async function Home() {
     .select(
       "id, name, city, zip_code, slug, features, google_meta, lat, lng, home_team, verification_score, is_claimed",
     )
-    // Logik: Zeige Bar wenn...
-    // 1. google_meta ist NULL
-    // 2. ODER status ist 'OPERATIONAL'
-    // 3. ODER status existiert gar nicht (Filter auf .is.null fängt {} ab)
     .or(
       "google_meta.is.null,google_meta->>status.eq.OPERATIONAL,google_meta->>status.is.null",
     )
@@ -72,7 +68,7 @@ export default async function Home() {
     : [];
 
   const barsWithGeo = sortedBars.filter((b) => b.lat && b.lng);
-  const popularBars = sortedBars.slice(0, 50);
+  const popularBars = barsWithGeo.slice(0, 200);
 
   return (
     <main style={{ background: "#f8f9fa", minHeight: "100vh" }}>

@@ -122,9 +122,7 @@ const OwnerCheckboxWrapper = styled.div`
     height: 20px;
     margin-top: 2px;
     accent-color: #0070f3;
-    cursor: pointer;
   }
-
   &:hover {
     border-color: #0070f3;
   }
@@ -204,18 +202,7 @@ const TooltipWrapper = styled.span`
     opacity: 0;
     transition: opacity 0.3s;
     font-size: 0.8rem;
-    font-weight: normal;
     pointer-events: none;
-    &::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: #333 transparent transparent transparent;
-    }
   }
   &:hover .tooltip-text {
     visibility: visible;
@@ -225,18 +212,19 @@ const TooltipWrapper = styled.span`
 
 // --- KOMPONENTE ---
 
-export default function AddBarPage() {
+export default function AddBarClient() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL Check
+  // URL Parameter auslesen
   const isOwnerMode = searchParams.get("role") === "owner";
+  const prefilledCity = searchParams.get("prefill_city") || "";
 
-  // Manueller Checkbox Status (initial true, wenn role=owner in URL)
+  // Lokaler State für Checkbox
   const [manualOwner, setManualOwner] = useState(isOwnerMode);
 
-  // Synchronisiere state mit URL beim ersten laden
+  // Sync bei Mount
   useEffect(() => {
     if (isOwnerMode) setManualOwner(true);
   }, [isOwnerMode]);
@@ -248,13 +236,10 @@ export default function AddBarPage() {
     const result = await addBar(formData);
 
     if (result.success) {
-      // Wenn Entweder URL-Flag ODER Checkbox aktiv: Sprung zum #owner Anker
       const finalIsOwner = isOwnerMode || manualOwner;
-
       const targetPath = finalIsOwner
         ? `/bar/${result.slug}#owner`
         : `/bar/${result.slug}`;
-
       router.push(targetPath);
     } else {
       alert("Fehler: " + result.message);
@@ -290,7 +275,6 @@ export default function AddBarPage() {
         </Subtitle>
 
         <Form onSubmit={handleSubmit}>
-          {/* Basis Infos */}
           <div>
             <Label>Name der Bar</Label>
             <Input
@@ -312,7 +296,12 @@ export default function AddBarPage() {
             </div>
             <div style={{ flex: 2 }}>
               <Label>Stadt</Label>
-              <Input name="city" placeholder="Hamburg" required />
+              <Input
+                name="city"
+                placeholder="Hamburg"
+                defaultValue={prefilledCity}
+                required
+              />
             </div>
           </div>
 
@@ -352,14 +341,21 @@ export default function AddBarPage() {
             <Label>Hausmannschaft</Label>
             <Select name="home_team" defaultValue="">
               <option value="">– Keine spezielle Mannschaft –</option>
-              <optgroup label="1. Bundesliga">
-                {getTeamsByLeague("bundesliga").map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </optgroup>
-              {/* ... weitere Ligen wie gehabt ... */}
+              {[
+                "bundesliga",
+                "2bundesliga",
+                "3liga",
+                "premier-league",
+                "la-liga",
+              ].map((league) => (
+                <optgroup key={league} label={league.toUpperCase()}>
+                  {getTeamsByLeague(league).map((t) => (
+                    <option key={t.name} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </Select>
           </div>
 
@@ -375,22 +371,14 @@ export default function AddBarPage() {
             </GridContainer>
           </div>
 
-          {/* INHABER CHECKBOX (Anstelle des statischen Hinweises) */}
           <OwnerCheckboxWrapper
             $active={manualOwner}
             onClick={() => setManualOwner(!manualOwner)}
           >
-            <input
-              type="checkbox"
-              checked={manualOwner}
-              onChange={() => {}} // Handle über Wrapper Click
-            />
+            <input type="checkbox" checked={manualOwner} readOnly />
             <OwnerText>
               <strong>Ich bin der Inhaber / Betreiber</strong>
-              <p>
-                Aktiviere dies, um dein Profil direkt nach der Erstellung zu
-                verifizieren und das offizielle Siegel zu erhalten.
-              </p>
+              <p>Aktiviere dies, um dein Profil direkt zu verifizieren.</p>
             </OwnerText>
           </OwnerCheckboxWrapper>
 

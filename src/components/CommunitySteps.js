@@ -57,26 +57,29 @@ export function CommunitySteps() {
       <StepGrid>
         <StepCard $delay={0.1}>
           <div className="number-badge">1</div>
-          <h3>Suche deine Bar</h3>
+          <h3>Suche in deiner Nähe</h3>
           <p>
-            Filtere nach Team, Wettbewerb oder Ort und finde die perfekte
-            Location für den Anstoß.
+            Gib deine Stadt oder deinen Standort ein, um alle Fußballkneipen in
+            deiner Nähe zu sehen. Filtere die Ergebnisse danach einfach nach
+            Wettbewerb oder deinem Lieblingsteam.
           </p>
         </StepCard>
         <StepCard $delay={0.2}>
           <div className="number-badge">2</div>
-          <h3>Check den Status</h3>
+          <h3>Alles auf einen Blick</h3>
           <p>
-            Profitiere von Community-Bestätigungen in Echtzeit. Läuft das Spiel?
-            Die Fans vor Ort sagen es dir.
+            Checke Wettbewerbe, Öffnungszeiten und die Hausmannschaft. Wir
+            bündeln alle Infos an einem Ort, damit du nie wieder vor
+            verschlossenen Türen stehst.
           </p>
         </StepCard>
         <StepCard $delay={0.3}>
           <div className="number-badge">3</div>
-          <h3>Zusammen schauen</h3>
+          <h3>Der Community-Gedanke</h3>
           <p>
-            Geh hin, triff Gleichgesinnte und genieße die Atmosphäre. Von Fans
-            für Fans gemacht.
+            Von Fans für Fans: Entdecke neue Lieblingsorte, teile deine
+            Geheimtipps und sorge dafür, dass kein Fußballfan mehr allein vor
+            dem kleinen Bildschirm sitzen muss.
           </p>
         </StepCard>
       </StepGrid>

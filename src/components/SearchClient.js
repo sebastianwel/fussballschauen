@@ -10,7 +10,7 @@ import SearchBar from "@/components/SearchBar";
 import TeamSelector from "@/components/TeamSelector";
 import { COMPETITIONS } from "@/lib/constants";
 
-// --- STYLES (Unverändert übernommen) ---
+// --- STYLES ---
 const MainContainer = styled.main`
   display: flex;
   height: 100vh;
@@ -85,8 +85,23 @@ const FilterChip = styled.button`
   transition: all 0.2s;
 `;
 
-const TeamSearchWrapper = styled.div`
-  padding: 0 20px 12px 20px;
+const WarningBox = styled.div`
+  margin: 15px 20px 5px 20px;
+  padding: 16px;
+  background: #fff9db;
+  border-radius: 16px;
+  border: 1px solid #ffeeba;
+  font-size: 0.85rem;
+  color: #856404;
+  line-height: 1.5;
+
+  a {
+    display: inline-block;
+    margin-top: 8px;
+    color: #0070f3;
+    font-weight: 700;
+    text-decoration: underline;
+  }
 `;
 
 const ToggleButton = styled.button`
@@ -111,7 +126,7 @@ const ToggleButton = styled.button`
   }
 `;
 
-// --- INNER COMPONENT (um useSearchParams sicher zu nutzen) ---
+// --- INNER COMPONENT ---
 function SearchContent({
   bars,
   query,
@@ -122,8 +137,6 @@ function SearchContent({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // --- STATE ---
-  // Wir initialisieren den Filter direkt aus der URL (?filter=bundesliga)
   const [activeFilter, setActiveFilter] = useState(
     () => searchParams.get("filter") || null,
   );
@@ -132,7 +145,6 @@ function SearchContent({
   const [selectedBarId, setSelectedBarId] = useState(null);
   const [showMapMobile, setShowMapMobile] = useState(false);
 
-  // Sync bei URL-Änderung (z.B. Klick auf HomeQuickFilter)
   useEffect(() => {
     const filterFromUrl = searchParams.get("filter");
     if (filterFromUrl) {
@@ -144,16 +156,12 @@ function SearchContent({
   // --- FILTER LOGIK ---
   const filteredBars = useMemo(() => {
     let result = bars;
-
-    // 1. Filter nach Wettbewerb (ID muss mit constants.js übereinstimmen)
     if (activeFilter) {
       result = result.filter((bar) => {
         const votes = bar.competition_votes;
         return votes && typeof votes === "object" && votes[activeFilter] > 0;
       });
     }
-
-    // 2. Filter nach Team (Heimteam)
     if (selectedTeam) {
       result = result.filter(
         (bar) =>
@@ -161,23 +169,34 @@ function SearchContent({
           bar.home_team.toLowerCase().includes(selectedTeam.toLowerCase()),
       );
     }
-
     return result;
   }, [bars, activeFilter, selectedTeam]);
 
+  // --- DISTANZ CHECK ---
+  // Wir prüfen, wie weit die nächste Bar vom Suchort entfernt ist
+  const isVeryFar = useMemo(() => {
+    if (filteredBars.length > 0 && filteredBars[0].distance) {
+      return filteredBars[0].distance > 10; // Mehr als 10km entfernt
+    }
+    return false;
+  }, [filteredBars]);
+
   // --- KARTE ZENTRIEREN ---
   const mapCenter = useMemo(() => {
+    // 1. Wenn eine Bar ausgewählt ist -> Fokus Bar
     if (selectedBarId) {
       const selectedBar = bars.find((b) => b.id === selectedBarId);
       if (selectedBar) return [selectedBar.lat, selectedBar.lng];
     }
-    if (filteredBars.length > 0) {
-      return [filteredBars[0].lat, filteredBars[0].lng];
-    }
+    // 2. WICHTIG: Wenn Geocoding-Koordinaten da sind (Buxtehude), bleib dort!
     if (initialLat && initialLng) {
       return [initialLat, initialLng];
     }
-    return [51.16336, 10.44768];
+    // 3. Fallback: Erste gefundene Bar
+    if (filteredBars.length > 0) {
+      return [filteredBars[0].lat, filteredBars[0].lng];
+    }
+    return [51.16336, 10.44768]; // Deutschland Mitte
   }, [filteredBars, selectedBarId, initialLat, initialLng, bars]);
 
   const handleListClick = (barId, slug) => {
@@ -196,13 +215,25 @@ function SearchContent({
       <ListPanel $isMapOpen={showMapMobile}>
         <div style={{ padding: "20px", borderBottom: "1px solid #f0f0f0" }}>
           <SearchBar initialQuery={query} />
+
           <div
             style={{ marginTop: "15px", fontSize: "0.9rem", color: "#64748b" }}
           >
             <strong>{filteredBars.length}</strong> Treffer{" "}
             {query && `für "${query}"`}
-            {selectedTeam && ` (Fans von ${selectedTeam})`}
           </div>
+
+          {/* BUXTEHUDE-CASE: Gelber Hinweis-Kasten */}
+          {isVeryFar && query && !isUserLocation && (
+            <WarningBox>
+              📍 In <strong>{query}</strong> haben wir noch keine Bar-Einträge.
+              Hier sind die nächsten Ergebnisse in der Umgebung:
+              <br />
+              <Link href={`/add?prefill_city=${query}`}>
+                Kennst du eine Bar in {query}? Jetzt eintragen!
+              </Link>
+            </WarningBox>
+          )}
         </div>
 
         <FilterContainer>
@@ -213,7 +244,7 @@ function SearchContent({
                 setActiveFilter(null);
                 setSelectedTeam(null);
                 setShowTeamSearch(false);
-                router.push("/search"); // URL aufräumen
+                router.push("/search");
               }}
             >
               Alle
@@ -238,7 +269,6 @@ function SearchContent({
                   setActiveFilter(newFilter);
                   setSelectedTeam(null);
                   setShowTeamSearch(false);
-                  // URL synchronisieren
                   if (newFilter) router.push(`/search?filter=${newFilter}`);
                   else router.push("/search");
                 }}
@@ -249,7 +279,7 @@ function SearchContent({
           </ChipScroll>
 
           {showTeamSearch && (
-            <TeamSearchWrapper>
+            <div style={{ padding: "0 20px 12px 20px" }}>
               <TeamSelector
                 value={selectedTeam}
                 onChange={(team) => {
@@ -257,23 +287,7 @@ function SearchContent({
                   if (team) setActiveFilter(null);
                 }}
               />
-              {selectedTeam && (
-                <button
-                  onClick={() => setSelectedTeam(null)}
-                  style={{
-                    marginTop: "8px",
-                    background: "none",
-                    border: "none",
-                    color: "#0070f3",
-                    fontSize: "0.8rem",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  Suche zurücksetzen
-                </button>
-              )}
-            </TeamSearchWrapper>
+            </div>
           )}
         </FilterContainer>
 
@@ -300,24 +314,21 @@ function SearchContent({
         $isMapOpen={showMapMobile}
         onClick={() => setShowMapMobile(!showMapMobile)}
       >
-        {showMapMobile ? (
-          <>
-            <span role="img">📜</span> Liste
-          </>
-        ) : (
-          <>
-            <span role="img">🗺️</span> Karte
-          </>
-        )}
+        {showMapMobile ? "📜 Liste" : "🗺️ Karte"}
       </ToggleButton>
     </MainContainer>
   );
 }
 
-// Export mit Suspense (notwendig für useSearchParams in Next.js)
 export default function SearchClient(props) {
   return (
-    <Suspense fallback={<div>Lade Suche...</div>}>
+    <Suspense
+      fallback={
+        <div style={{ padding: "100px", textAlign: "center" }}>
+          Suche wird geladen...
+        </div>
+      }
+    >
       <SearchContent {...props} />
     </Suspense>
   );

@@ -25,7 +25,7 @@ export default function DatenschutzClient() {
           (2) Verantwortlicher gem. Art. 4 Abs. 7 EU-Datenschutz-Grundverordnung
           (DSGVO) ist:
         </P>
-        <P
+        <div
           style={{
             background: "#f8fafc",
             padding: "15px",
@@ -43,7 +43,7 @@ export default function DatenschutzClient() {
           <br />
           <br />
           E-Mail: hallo@wolaeuftfussball.de
-        </P>
+        </div>
 
         <H2>2. Ihre Rechte</H2>
         <P>
@@ -179,70 +179,98 @@ export default function DatenschutzClient() {
 const Page = styled.main`
   max-width: 900px;
   margin: 0 auto;
-  padding: 60px 20px 100px;
+  padding: 20px 10px 100px; /* Weniger Abstand zum Rand auf Mobile */
   background-color: #f8fafc;
+
+  @media (min-width: 768px) {
+    padding: 60px 20px 100px;
+  }
 `;
 
 const Container = styled.div`
   background: white;
-  padding: 50px;
+  padding: 20px; /* Kleinerer Einstiegswert für Mobile */
   border-radius: 20px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+
+  /* WICHTIG: Verhindert, dass langer Text den Rahmen sprengt */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+
+  @media (min-width: 768px) {
+    padding: 50px; /* Voller Abstand auf dem Desktop */
+  }
 `;
 
 const H1 = styled.h1`
-  font-size: 2.5rem;
-  margin-bottom: 2.5rem;
+  font-size: 1.8rem; /* Kleiner auf Mobile */
+  margin-bottom: 2rem;
   color: #0f172a;
   font-weight: 900;
-  letter-spacing: -1.5px;
+  letter-spacing: -1px;
   border-bottom: 4px solid #0070f3;
   display: inline-block;
   padding-bottom: 5px;
+  line-height: 1.1;
+
+  @media (min-width: 768px) {
+    font-size: 2.5rem;
+    letter-spacing: -1.5px;
+  }
 `;
 
 const H2 = styled.h2`
-  font-size: 1.6rem;
-  margin-top: 3rem;
-  margin-bottom: 1.2rem;
+  font-size: 1.4rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
   color: #0f172a;
   font-weight: 800;
+
+  @media (min-width: 768px) {
+    font-size: 1.6rem;
+    margin-top: 3rem;
+  }
 `;
 
 const H3 = styled.h3`
-  font-size: 1.25rem;
-  margin-top: 2rem;
+  font-size: 1.15rem;
+  margin-top: 1.8rem;
   margin-bottom: 0.8rem;
   color: #1e293b;
   font-weight: 700;
 `;
 
 const P = styled.p`
-  line-height: 1.8;
+  line-height: 1.6; /* Etwas kompakter für bessere Lesbarkeit auf Mobile */
   color: #475569;
   margin-bottom: 1.2rem;
-  font-size: 1rem;
+  font-size: 0.95rem;
+
+  @media (min-width: 768px) {
+    line-height: 1.8;
+    font-size: 1rem;
+  }
 
   strong {
     color: #0f172a;
-  }
-
-  a {
-    color: #0070f3;
-    text-decoration: underline;
-    font-weight: 600;
   }
 `;
 
 const UL = styled.ul`
   margin-bottom: 1.5rem;
-  padding-left: 20px;
+  padding-left: 1.2rem;
   list-style-type: square;
 `;
 
 const LI = styled.li`
   margin-bottom: 0.8rem;
-  line-height: 1.6;
+  line-height: 1.5;
   color: #475569;
+  font-size: 0.95rem;
+
+  @media (min-width: 768px) {
+    font-size: 1rem;
+  }
 `;
